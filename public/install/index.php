@@ -16,8 +16,8 @@ if (!$locked && $_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $host = trim((string) ($_POST['db_host'] ?? '127.0.0.1'));
         $port = trim((string) ($_POST['db_port'] ?? '3306'));
-        $name = trim((string) ($_POST['db_name'] ?? ''));
-        $user = trim((string) ($_POST['db_user'] ?? ''));
+        $name = trim((string) ($_POST['db_name'] ?? 'admin'));
+        $user = trim((string) ($_POST['db_user'] ?? 'admin'));
         $pass = (string) ($_POST['db_pass'] ?? '');
         $base = rtrim(trim((string) ($_POST['base_url'] ?? '')), '/');
         $adminPass = (string) ($_POST['admin_pass'] ?? '');
@@ -119,9 +119,9 @@ if (!$locked && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <label style="margin-top:12px">DB port</label>
           <input name="db_port" inputmode="numeric" value="<?= Helpers::h((string) ($_POST['db_port'] ?? '3306')) ?>" required>
           <label style="margin-top:12px">DB name</label>
-          <input name="db_name" value="<?= Helpers::h((string) ($_POST['db_name'] ?? '')) ?>" required>
+          <input name="db_name" value="<?= Helpers::h((string) ($_POST['db_name'] ?? 'admin')) ?>" required>
           <label style="margin-top:12px">DB user</label>
-          <input name="db_user" value="<?= Helpers::h((string) ($_POST['db_user'] ?? '')) ?>" required>
+          <input name="db_user" value="<?= Helpers::h((string) ($_POST['db_user'] ?? 'admin')) ?>" required>
           <label style="margin-top:12px">DB password</label>
           <input name="db_pass" type="password" autocomplete="new-password">
           <label style="margin-top:12px">Website URL</label>
