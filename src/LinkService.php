@@ -49,8 +49,6 @@ final class LinkService
                     throw $e;
                 }
 
-                // Another request claimed this e-length after our lookup.
-                // Move forward and retry until the configured maximum.
                 $candidate = $length + 1;
             }
         }
@@ -156,12 +154,49 @@ final class LinkService
         $today = (int) $this->pdo->query(
             "SELECT COUNT(*) FROM click_logs WHERE clicked_at >= CURDATE()"
         )->fetchColumn();
+        $active = (int) $this->pdo->query(
+            "SELECT COUNT(*) FROM links WHERE enabled = 1 AND (expires_at IS NULL OR expires_at >= NOW())"
+        )->fetchColumn();
 
         return [
             'links' => $totalLinks,
             'clicks' => $totalClicks,
             'today' => $today,
+            'active' => $active,
         ];
+    }
+
+    public function dailyClicks(int $days = 7): array
+    {
+        $days = max(1, min($days, 90));
+        $start = (new DateTimeImmutable('today'))->modify('-' . ($days - 1) . ' days');
+
+        $stmt = $this->pdo->prepare(
+            'SELECT DATE(clicked_at) AS day, COUNT(*) AS clicks
+             FROM click_logs
+             WHERE clicked_at >= :start
+             GROUP BY DATE(clicked_at)
+             ORDER BY day ASC'
+        );
+        $stmt->execute([
+            ':start' => $start->format('Y-m-d 00:00:00'),
+        ]);
+
+        $byDay = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byDay[(string) $row['day']] = (int) $row['clicks'];
+        }
+
+        $result = [];
+        for ($i = 0; $i < $days; $i++) {
+            $day = $start->modify("+{$i} days")->format('Y-m-d');
+            $result[] = [
+                'day' => $day,
+                'clicks' => $byDay[$day] ?? 0,
+            ];
+        }
+
+        return $result;
     }
 
     public function recentLinks(int $limit = 20): array
@@ -221,6 +256,39 @@ final class LinkService
             'page' => $page,
             'per' => $per,
         ];
+    }
+
+    public function updateLink(int $id, string $targetUrl, ?string $expiresAt): void
+    {
+        $targetUrl = Helpers::normalizeUrl($targetUrl);
+        if (!Helpers::isAllowedUrl($targetUrl)) {
+            throw new InvalidArgumentException('Invalid URL. Only http/https public URLs are allowed.');
+        }
+
+        if ($expiresAt !== null && $expiresAt !== '') {
+            $dt = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $expiresAt);
+            if (!$dt) {
+                throw new InvalidArgumentException('Invalid expiration date.');
+            }
+            $expiresAt = $dt->format('Y-m-d H:i:s');
+        } else {
+            $expiresAt = null;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'UPDATE links
+             SET target_url = :url, expires_at = :expires, updated_at = :now
+             WHERE id = :id'
+        );
+        $stmt->bindValue(':url', $targetUrl);
+        if ($expiresAt === null) {
+            $stmt->bindValue(':expires', null, PDO::PARAM_NULL);
+        } else {
+            $stmt->bindValue(':expires', $expiresAt);
+        }
+        $stmt->bindValue(':now', Helpers::now());
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
     }
 
     public function setEnabled(int $id, bool $enabled): void
