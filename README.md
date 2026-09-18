@@ -114,3 +114,7 @@ Body: `url`, `length`
 - Session cookie: httponly, samesite Lax, secure when HTTPS
 - Rate limits on create, API, login
 - Config lives outside the public directory
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
