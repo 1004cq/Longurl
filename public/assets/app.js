@@ -1,6 +1,7 @@
 (() => {
   const form = document.getElementById('gen-form');
   if (!form) return;
+
   const url = document.getElementById('url');
   const length = document.getElementById('length');
   const preview = document.getElementById('preview');
@@ -14,6 +15,12 @@
   const submit = document.getElementById('submit');
   const pills = document.querySelectorAll('[data-len]');
   const base = document.body.dataset.base || '';
+  const labels = {
+    generate: document.body.dataset.generate || 'Generate long URL',
+    generating: document.body.dataset.generating || 'Generating…',
+    copy: document.body.dataset.copy || 'Copy',
+    copied: document.body.dataset.copied || 'Copied',
+  };
 
   const normalize = (v) => {
     v = (v || '').trim();
@@ -24,7 +31,7 @@
 
   const renderPreview = () => {
     const n = Math.max(0, parseInt(length.value || '0', 10) || 0);
-    preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 80)) + (n > 80 ? '…' : '') + `  ·  ${n} e's`;
+    preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 80)) + (n > 80 ? '…' : '') + `  ·  ${n} e`;
   };
 
   pills.forEach((p) => {
@@ -35,10 +42,12 @@
       renderPreview();
     });
   });
+
   length.addEventListener('input', () => {
     pills.forEach((x) => x.classList.toggle('active', x.dataset.len === length.value));
     renderPreview();
   });
+
   renderPreview();
 
   form.addEventListener('submit', async (e) => {
@@ -46,29 +55,41 @@
     err.textContent = '';
     result.classList.remove('show');
     submit.disabled = true;
-    submit.textContent = 'Generating…';
+    submit.textContent = labels.generating;
+
     try {
       const fd = new FormData(form);
       fd.set('url', normalize(url.value));
-      const res = await fetch('/?action=create', { method: 'POST', body: fd });
+
+      const res = await fetch('/?action=create', {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'fetch' },
+      });
+
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Failed');
+
       outUrl.textContent = data.url;
-      outLen.textContent = data.length + " e's";
+      outLen.textContent = data.length + ' e';
       outTarget.textContent = data.target;
       openBtn.href = data.url;
       result.classList.add('show');
     } catch (ex) {
-      err.textContent = ex.message;
+      err.textContent = ex instanceof Error ? ex.message : 'Failed';
     } finally {
       submit.disabled = false;
-      submit.textContent = 'Generate long URL';
+      submit.textContent = labels.generate;
     }
   });
 
   copyBtn.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(outUrl.textContent);
-    copyBtn.textContent = 'Copied';
-    setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
+    try {
+      await navigator.clipboard.writeText(outUrl.textContent);
+      copyBtn.textContent = labels.copied;
+      setTimeout(() => (copyBtn.textContent = labels.copy), 1200);
+    } catch {
+      copyBtn.textContent = labels.copy;
+    }
   });
 })();

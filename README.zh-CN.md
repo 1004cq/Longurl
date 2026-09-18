@@ -28,8 +28,8 @@
 - 实时预览最终链接长度
 - 复制 / 打开；Enter 提交；Loading 与错误提示
 - URL 自动补 `https://`；只允许公网 `http` / `https`
-- 后台：Dashboard、链接管理（搜索/启用/禁用/删除）、访问日志、API 说明
-- API：`POST /api/create`，需 Token
+- 后台 V2：中英文切换、Dashboard、搜索、分页、编辑目标地址/过期时间、启用/禁用/删除、访问日志、API 与设置
+- 统计：7 天 / 30 天流量、Top Links、最近访问、CSV 导出\n- API：`POST /api/create`，使用请求头 Token
 - Web 安装器：`/install/`，安装完锁定
 
 ---

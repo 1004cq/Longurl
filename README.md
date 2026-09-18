@@ -28,8 +28,8 @@ When someone opens a pure-`e` path:
 - Live preview of final URL length
 - Copy / Open; Enter to submit; loading and error states
 - Auto-prefix `https://`; only public `http` / `https` targets
-- Admin: dashboard, link search / enable / disable / delete, visit logs, API notes
-- API: `POST /api/create` with a token
+- Admin V2: responsive English/中文 UI, dashboard, search, pagination, edit target/expiry, enable/disable/delete, visit logs, API and settings
+- Analytics: 7-day / 30-day traffic, Top Links, recent visits, CSV exports\n- API: `POST /api/create` with header token authentication
 - Web installer at `/install/`, locked after setup
 
 ---
