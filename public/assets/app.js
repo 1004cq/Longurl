@@ -51,8 +51,33 @@
     p.addEventListener('click', () => setLength(p.dataset.len));
   });
 
-  range?.addEventListener('input', () => setLength(range.value));
-  length.addEventListener('input', () => setLength(length.value));
+  const syncFromRange = () => {
+    if (!range) return;
+    setLength(range.value);
+    range.setAttribute('aria-valuetext', range.value + ' e');
+  };
+
+  // Keep both displayed values and the preview changing live while the thumb moves.
+  range?.addEventListener('input', syncFromRange, { passive: true });
+  range?.addEventListener('change', syncFromRange);
+
+  length.addEventListener('input', () => {
+    const raw = length.value.trim();
+    if (raw === '') return;
+
+    const n = clamp(parseInt(raw, 10) || min);
+    if (range) {
+      range.value = String(n);
+      range.setAttribute('aria-valuetext', n + ' e');
+    }
+    if (lenLabel) lenLabel.textContent = n + ' e';
+    ticks.forEach((x) => x.classList.toggle('active', x.dataset.len === String(n)));
+    if (preview) {
+      preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 36)) + (n > 36 ? '…' : '') + `  ·  ${n} e`;
+    }
+  });
+
+  length.addEventListener('change', () => setLength(length.value));
   setLength(length.value || '100');
 
   form.addEventListener('submit', async (e) => {
