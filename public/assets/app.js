@@ -31,7 +31,7 @@
 
   const renderPreview = () => {
     const n = Math.max(0, parseInt(length.value || '0', 10) || 0);
-    preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 80)) + (n > 80 ? '…' : '') + `  ·  ${n} e`;
+    preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 36)) + (n > 36 ? '…' : '') + `  ·  ${n} e`;
   };
 
   pills.forEach((p) => {
