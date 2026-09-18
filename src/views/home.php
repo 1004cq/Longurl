@@ -7,6 +7,8 @@ $base = Helpers::baseUrl($config ?? ['app' => ['base_url' => '']]);
 $csrf = Helpers::csrfToken();
 $title = $title ?? 'EEEE — Long URL Generator';
 $desc = I18n::t('description');
+$minLen = (int) ($config['app']['min_length'] ?? 8);
+$maxLen = (int) ($config['app']['max_length'] ?? 5000);
 ?><!doctype html>
 <html lang="<?= Helpers::h(I18n::locale()) ?>">
 <head>
@@ -57,21 +59,36 @@ $desc = I18n::t('description');
           <label for="url"><?= Helpers::h(I18n::t('original_url')) ?></label>
           <input id="url" name="url" type="text" placeholder="example.com/test" required autocomplete="off">
 
-          <label style="margin-top:16px"><?= Helpers::h(I18n::t('length')) ?></label>
-          <div class="pills">
-            <?php foreach ([50,100,200,500,1000,2000] as $n): ?>
-              <button type="button" class="pill<?= $n === 100 ? ' active' : '' ?>" data-len="<?= $n ?>"><?= $n ?></button>
-            <?php endforeach; ?>
+          <label style="margin-top:16px" for="length-range"><?= Helpers::h(I18n::t('length')) ?></label>
+          <div class="len-wrap">
+            <div class="len-top">
+              <strong id="len-label">100 e</strong>
+            </div>
+            <input
+              id="length-range"
+              type="range"
+              min="<?= $minLen ?>"
+              max="<?= $maxLen ?>"
+              step="1"
+              value="100"
+              aria-label="<?= Helpers::h(I18n::t('length')) ?>"
+            >
+            <div class="len-ticks">
+              <?php foreach ([50,100,200,500,1000,2000] as $n): ?>
+                <?php if ($n >= $minLen && $n <= $maxLen): ?>
+                  <button type="button" class="len-tick<?= $n === 100 ? ' active' : '' ?>" data-len="<?= $n ?>"><?= $n ?></button>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </div>
+            <input
+              id="length"
+              name="length"
+              type="number"
+              min="<?= $minLen ?>"
+              max="<?= $maxLen ?>"
+              value="100"
+            >
           </div>
-
-          <input
-            id="length"
-            name="length"
-            type="number"
-            min="<?= (int) ($config['app']['min_length'] ?? 8) ?>"
-            max="<?= (int) ($config['app']['max_length'] ?? 5000) ?>"
-            value="100"
-          >
 
           <div class="meta" id="preview"></div>
           <button class="btn" id="submit" type="submit"><?= Helpers::h(I18n::t('generate')) ?></button>
