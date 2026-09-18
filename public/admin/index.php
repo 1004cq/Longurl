@@ -26,6 +26,29 @@ function saveLocalConfig(array $config): void
     @chmod(CONFIG_FILE, 0640);
 }
 
+function outputCsv(string $filename, array $headers, array $rows): never
+{
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('X-Content-Type-Options: nosniff');
+
+    $out = fopen('php://output', 'wb');
+    if ($out === false) {
+        http_response_code(500);
+        exit;
+    }
+
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, $headers);
+
+    foreach ($rows as $row) {
+        fputcsv($out, array_values($row));
+    }
+
+    fclose($out);
+    exit;
+}
+
 $view = (string) ($_GET['view'] ?? 'dashboard');
 $error = '';
 $notice = trim((string) ($_GET['notice'] ?? ''));
@@ -57,6 +80,52 @@ if ($view === 'login') {
 }
 
 Auth::requireLogin();
+
+$export = (string) ($_GET['export'] ?? '');
+if ($export === 'links') {
+    $q = trim((string) ($_GET['q'] ?? ''));
+    $rows = array_map(
+        static fn(array $row): array => [
+            $row['id'],
+            $row['e_length'],
+            $row['target_url'],
+            $row['clicks'],
+            $row['enabled'],
+            $row['created_at'],
+            $row['updated_at'],
+            $row['expires_at'] ?? '',
+        ],
+        $links->exportLinks($q)
+    );
+
+    outputCsv(
+        'eeee-links-' . date('Ymd-His') . '.csv',
+        ['id', 'e_length', 'target_url', 'clicks', 'enabled', 'created_at', 'updated_at', 'expires_at'],
+        $rows
+    );
+}
+
+if ($export === 'clicks') {
+    $rows = array_map(
+        static fn(array $row): array => [
+            $row['id'],
+            $row['clicked_at'],
+            $row['e_length'],
+            $row['target_url'],
+            $row['ip'],
+            $row['referer'],
+            $row['request_uri'],
+            $row['user_agent'],
+        ],
+        $links->exportClicks()
+    );
+
+    outputCsv(
+        'eeee-clicks-' . date('Ymd-His') . '.csv',
+        ['id', 'clicked_at', 'e_length', 'target_url', 'ip', 'referer', 'request_uri', 'user_agent'],
+        $rows
+    );
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Helpers::verifyCsrf($_POST['_csrf'] ?? null)) {
@@ -158,10 +227,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$period = (int) ($_GET['period'] ?? 7);
+$period = in_array($period, [7, 30], true) ? $period : 7;
+
 $stats = $links->stats();
-$dailyClicks = $links->dailyClicks(7);
+$periodClickCount = $links->periodClicks($period);
+$dailyClicks = $links->dailyClicks($period);
+$topLinks = $links->topLinks($period, 10);
 $recentLinks = $links->recentLinks();
-$recentClicks = $links->recentClicks();
+$recentClicks = $links->recentClicks(50);
 $q = trim((string) ($_GET['q'] ?? ''));
 $pageNo = max(1, (int) ($_GET['page'] ?? 1));
 $list = $links->searchLinks($q, $pageNo, 20);
