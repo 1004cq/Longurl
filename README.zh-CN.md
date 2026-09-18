@@ -2,95 +2,147 @@
 
 [English](README.md) · [中文](README.zh-CN.md)
 
-用更长的链接替换真实 URL。这不是短链接。
+这是一个「超长链接生成器」，不是短链接。
 
-生成出来的 path **只能全是字母 `e`**。用「有多少个 e」作为唯一 ID，不用随机字符串。
+用户贴一个真实 URL，系统生成一条 path **只有字母 `e`** 的长链接。  
+唯一标识是 **e 的个数**（`e_length`），不用随机字母数字混合码。
 
 ```
 原始：  https://example.com/test
 生成：  https://your-domain.example/eeeeeeeeee
 ```
 
-上面这条的 path 有 10 个 `e`。数据库里 `e_length = 10` 就对应这条记录。  
-如果 10 已被占用，系统会自动试 11、12、…直到找到空位。
+上面 path 有 10 个 `e`，数据库对应 `e_length = 10`。
 
-访问这个全 e path 时：
-
-- 找到且已启用 → `302` 跳到目标 URL，并记录点击
-- 找不到 / 已禁用 / 已过期 → 自定义 404（This e is lost.）
-- path 里出现任何非 `e` 的字符 → 也是 404
+本仓库不包含任何私人部署信息。请勿把真实域名、服务器 IP、数据库账密、API Token、管理员密码写进 README 或提交到 Git。
 
 ---
 
-## 功能
+## 工作原理
 
-- 首页生成长链接：输入 URL、选择或手填长度（8–5000，快捷 50 / 100 / 200 / 500 / 1000 / 2000）
-- 实时预览最终链接长度
-- 复制 / 打开；Enter 提交；Loading 与错误提示
-- URL 自动补 `https://`；只允许公网 `http` / `https`
-- 后台 V2：中英文切换、Dashboard、搜索、分页、编辑目标地址/过期时间、启用/禁用/删除、访问日志、API 与设置
-- 统计：7 天 / 30 天流量、Top Links、最近访问、CSV 导出\n- API：`POST /api/create`，使用请求头 Token
-- Web 安装器：`/install/`，安装完锁定
+1. 用户选一个希望长度，例如 100。
+2. 系统在 100 附近找还没被使用的 `e_length`。
+3. 多人同时生成时，优先在目标附近随机抽取空位，避免大家都挤在 100、101、102。
+4. 近处满了就扩大搜索半径；再不行就从目标往上找下一个空位。
+5. `e_length` 有唯一索引。两个请求抽到同一个数，后写入的会被拒绝并自动重抽。
+6. 访问 `/` + 一串 `e` 时，用字符串长度查表。命中且启用、未过期 → `302` 跳目标，并记一条点击日志。
+7. path 里出现任何非 `e` 字符，或找不到记录 → 404。
+
+长度范围默认 8–5000，可在服务器配置里改。首页用滑块选长度，下方仍有 50 / 100 / 200 / 500 / 1000 / 2000 刻度和数字框。
 
 ---
 
-## 技术栈
+## 功能清单
+
+### 前台
+
+- 输入目标 URL，缺少协议时自动补 `https://`
+- 滑块 + 刻度 + 手输长度
+- 实时预览（域名 + 若干个 e）
+- 生成后可复制、新窗口打开
+- 中英文切换
+- 手机适配；超长 e 串不会撑宽页面
+
+### 跳转
+
+- 只识别纯 `e` path
+- 302 跳转，记录 IP、UA、Referer、URI、时间
+- 禁用或过期的链接走 404
+
+### 后台 `/admin/`
+
+- Dashboard：链接数、总点击、今日点击、近期趋势
+- Links：搜索、分页、编辑目标/过期、启用、禁用、删除
+- Analytics：访问日志、7/30 天、Top Links、CSV 导出
+- API / Settings：说明；轮换 Token 或密码只改服务器上的配置文件
+
+### API
+
+`POST /api/create`，需 Token。
+
+### 安装器
+
+`/install/` 填库信息和站点公网地址，安装完写锁。
+
+---
+
+## 环境要求
 
 | 项目 | 要求 |
 |---|---|
-| 语言 | PHP 8.3 / 8.4 / 8.5（声明 `strict_types`） |
-| 数据库 | MySQL 5.7+ / 8.x，InnoDB，utf8mb4 |
-| 网站 | Nginx（宝塔可直接用） |
-| 依赖 | 不要 Node.js，不要 Composer |
+| 系统 | Ubuntu + Nginx（宝塔可用） |
+| PHP | 8.3 / 8.4 / 8.5，`declare(strict_types=1)` |
 | 扩展 | `pdo` `pdo_mysql` `mbstring` `openssl` `json` `session` `filter` |
+| 数据库 | MySQL 5.7+ 或 8.x，InnoDB，utf8mb4 |
+| 不要 | Node.js、Composer |
+
+HTTPS 用的是站点 SSL证书（Let's Encrypt 等），不是 SSH 登录密钥。两者不能混用。
 
 ---
 
-## 目录说明
+## 目录
 
 ```
 .
 ├── config/
-│   └── local.php.example    # 范例；真实 local.php 由安装器生成，不入仓
-├── public/                 # 站点运行目录（Nginx root）
-│   ├── index.php             # 唯一入口：首页 / 跳转 / API
-│   ├── admin/                # 后台
-│   ├── install/              # 安装器
-│   └── assets/               # CSS / JS
-├── src/                    # 业务代码
-│   ├── bootstrap.php
-│   ├── Database.php
-│   ├── LinkService.php
-│   ├── Auth.php
-│   ├── RateLimiter.php
-│   ├── Helpers.php
-│   └── views/
-├── sql/schema.sql          # 建表
-├── nginx/rewrite.conf      # 宝塔/伪静态
-├── storage/                # 安装锁 installed.lock
-├── LICENSE                 # MIT
-├── README.md               # English
-└── README.zh-CN.md         # 中文
+│   └── local.php.example    #范例；真实 local.php 由安装器生成，已 gitignore
+├── public/                 #网站运行目录
+│   ├── index.php             #首页 / 跳转 / API
+│   ├── admin/                #后台入口
+│   ├── install/              #安装器
+│   └── assets/               #CSS / JS
+├── src/                    #业务与视图
+├── sql/schema.sql
+├── nginx/rewrite.conf
+├── storage/                #安装锁
+├── LICENSE
+├── README.md
+└── README.zh-CN.md
 ```
 
-建议服务器落盘路径：
+建议落盘（把 `YOUR_DOMAIN` 换成你自己的目录名，不要写回仓库）：
 
 ```
-/www/wwwroot/YOUR_DOMAIN/e/          # 项目根
-/www/wwwroot/YOUR_DOMAIN/e/public    # 网站运行目录
+/www/wwwroot/YOUR_DOMAIN/e/          #项目根
+/www/wwwroot/YOUR_DOMAIN/e/public    #宝塔「运行目录」
 ```
 
-`config/` 和 `src/` 不在 Web 根目录内。不要把密码写进 `public/`。
+`config/`、`src/` 必须在 Web 根之外。
 
 ---
 
-## 安装步骤
+## 不要提交的内容
 
-### 1. 上传代码
+- `config/local.php`
+- `storage/installed.lock`
+- 任何 `.env`、数据库账号密码、API Token、证书私钥
+- 真实站点域名、面板端口、公网 IP
 
-把仓库内容放到服务器项目目录，例如 `/www/wwwroot/YOUR_DOMAIN/e/`。
+仓库里只保留 `config/local.php.example`。
 
-### 2. 建 MySQL 库
+---
+
+## 安装
+
+### 1. 下载代码
+
+```bash
+cd /www/wwwroot/YOUR_DOMAIN/e
+git clone https://github.com/1004cq/Longurl.git .
+```
+
+或下载 ZIP 解压到同目录，确保能看到 `public/` 与 `src/`。
+
+更新已部署的站：
+
+```bash
+cd /www/wwwroot/YOUR_DOMAIN/e
+git pull
+```
+
+不要把服务器上已生成的 `config/local.php` 盖掉。
+
+### 2. 建库
 
 ```sql
 CREATE DATABASE eeee_longurl CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -99,17 +151,17 @@ GRANT ALL PRIVILEGES ON eeee_longurl.* TO 'eeee_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-把 `CHANGE_ME` 换成自己的密码。表结构由安装器自动导入 `sql/schema.sql`，一般不用手动导。
+`CHANGE_ME` 换成你自己的密码，不要写进 Git。表由安装器导入 `sql/schema.sql`。
 
-表：
-
-- `links` — e 长度、目标 URL、点击数、启用状态、时间
-- `click_logs` — IP、UA、Referer、URI、时间
-- `rate_limits` — 接口 / 登录限速
+| 表 | 用途 |
+|---|---|
+| `links` | e 个数、目标 URL、点击、启用、过期 |
+| `click_logs` | 每次跳转的 IP / UA / Referer / URI |
+| `rate_limits` | 生成、API、登录限速 |
 
 ### 3. 权限
 
-宝塔运行用户一般是 `www`：
+宝塔 PHP 用户常见为 `www`：
 
 ```bash
 chown -R www:www /www/wwwroot/YOUR_DOMAIN/e
@@ -119,59 +171,63 @@ chmod 750 /www/wwwroot/YOUR_DOMAIN/e/storage
 
 PHP 必须能写：
 
-- `config/local.php`（安装时生成）
-- `storage/installed.lock`（安装完锁定）
+- `config/local.php`
+- `storage/installed.lock`
 
 ### 4. 宝塔站点
 
-1. 新建站点，**运行目录**选 `.../e/public`，不是项目根
-2. PHP 选 8.x
-3. 伪静态 / Nginx 配置粘贴 `nginx/rewrite.conf`
-4. 重载 Nginx
+1. 添加站点。
+2. **网站目录**指项目根 `.../e`。
+3. **运行目录** 填 `/public`（界面里常显示成 `/public`）。
+4. PHP 选 8.x。
+5. 伪静态粘贴 `nginx/rewrite.conf`。
+6. 把 `fastcgi_pass` 改成本机实际 sock（和当前站点配置里的一致）。
+7. 重载 Nginx。
 
-`nginx/rewrite.conf` 里的 `fastcgi_pass` 要改成你机器实际 PHP socket。宝塔里常见：
-
-```
-unix:/tmp/php-cgi-85.sock
-unix:/tmp/php-cgi-84.sock
-unix:/tmp/php-cgi-80.sock
-```
-
-长 path（1000+ 个 e）需要更大的 header 缓冲，规则里已写：
+超长 path 需要较大 header 缓冲，示例配置已包含：
 
 ```nginx
 large_client_header_buffers 8 32k;
 client_header_buffer_size 16k;
 ```
 
-### 5. Web 安装
+### 5. 站点 HTTPS
 
-浏览器打开：
+浏览器报 `ERR_SSL_PROTOCOL_ERROR` 时，一般是 443 没有站点证书，或 `listen 443` 没加 `ssl`。
 
-```
-https://YOUR_DOMAIN/install/
-```
+1. 先用 `http://YOUR_DOMAIN/install/` 确认程序能打开。
+2. 宝塔 → 站点 → SSL → 申请 Let's Encrypt。
+3. 证书成功前不要开「强制 HTTPS」。
+4. 云安全组放行 80 和 443。
+5. SSH 密钥只用来登录服务器，不能当作网站证书。
 
-填：
+### 6. Web 安装
+
+打开 `https://YOUR_DOMAIN/install/`（证书还没好就用 http）。
 
 | 字段 | 说明 |
 |---|---|
-| DB host / port | 一般 `127.0.0.1` 和 `3306` |
-| DB name / user / password | 上一步建的库 |
-| Website URL | 对外访问的完整根地址，带 `https://`，不要末尾斜杠 |
-| Admin password | 后台登录密码，会存 `password_hash` |
+| DB host / port | 常见 `127.0.0.1` 与 `3306` |
+| DB name / user / password | 上一步建的库，别发到公开地方 |
+| Website URL | 对外根地址，如 `https://your-domain.example`，无末尾 `/` |
+| Admin password | 只存 hash |
 
-安装器会：
+安装器会测连接、导表、写配置、生成 API Token、锁定安装器。然后打开 `/admin/`。
 
-1. 测试数据库
-2. 导入表
-3. 写 `config/local.php`
-4. 生成 API Token
-5. 写 `storage/installed.lock` 锁死安装器
+---
 
-安装完后打开 `/admin/` 登录。
+## 配置说明
 
-API Token 只在服务器的 `config/local.php` 里，**不要提交到 Git**。
+`config/local.php` 结构见 `config/local.php.example`，大致为：
+
+- `db.dsn` / `db.user` / `db.pass` — 数据库
+- `app.base_url` — 生成长链接时用的公网根
+- `app.min_length` / `app.max_length` — 默认 8 与 5000
+- `admin.password_hash` — 后台密码 hash
+- `admin.api_token` — API 密钥
+- `rate.*` — 每分钟限次
+
+轮换 Token：在服务器上改 `api_token`，不要把新值贴到仓库。
 
 ---
 
@@ -181,20 +237,15 @@ API Token 只在服务器的 `config/local.php` 里，**不要提交到 Git**。
 POST /api/create
 ```
 
-验证任意一种：
+任意一种验证：
 
-- Header：`Authorization: Bearer YOUR_TOKEN`
-- Header：`X-API-Token: YOUR_TOKEN`
-- 表单字段：`token`
+- `Authorization: Bearer YOUR_TOKEN`
+- `X-API-Token: YOUR_TOKEN`
+- 表单字段 `token`
 
-参数：
+参数：`url`（目标）、`length`（希望的 e 个数）。
 
-| 字段 | 说明 |
-|---|---|
-| `url` | 目标地址 |
-| `length` | 希望的 e 个数 |
-
-成功：
+成功示例：
 
 ```json
 {
@@ -205,49 +256,40 @@ POST /api/create
 }
 ```
 
-失败时 `success` 为 `false`，HTTP 状态可能是 400 / 401 / 429。
-
----
-
-## 后台
-
-地址：`/admin/`
-
-- Dashboard：链接总数、总点击、今日点击、最近生成、最近访问
-- Links：搜索、启用、禁用、删除
-- Analytics：IP、UA、Referer、URI、时间
-- API / Settings：说明；轮换 Token 或密码请直接改服务器上的 `config/local.php`
+失败时 `success` 为 false，状态码可能 400 / 401 / 429。`length` 是实际写入的 e 个数，可能和请求值略有差异。
 
 ---
 
 ## 安全
 
-- PDO 预编译，不拼 SQL
-- 页面输出 `htmlspecialchars`
-- URL：`FILTER_VALIDATE_URL`，仅 `http`/`https`，拒绝 `javascript:` `data:` `file:` 以及私网 IP / localhost
-- 表单 CSRF；Session 登录
-- Cookie：httponly、HTTPS 下 secure、SameSite=Lax
-- 生成接口 / API / 后台登录都有每分钟限速
-- 生产环境关闭详细 PHP 错误；数据库异常不会把账密打到页面
-- 管理密码只存 hash
+- PDO 预编译
+- 输出转义
+- 只允许公网 `http`/`https`，拒绝 `javascript:` `data:` `file:`、localhost、私网 IP
+- CSRF + Session
+- Cookie：httponly，HTTPS 下 secure，SameSite=Lax
+- 生成 / API / 登录限速
+- 生产环境不打详细错误，也不会把库密码输出到页面
+- 管理密码仅 hash
 
 ---
 
-## 常见问题
+## 排错
 
 | 现象 | 处理 |
 |---|---|
-| 一直跳到 `/install/` | 缺 `config/local.php` 或 `storage/installed.lock`，检查写入权限 |
-| 安装失败 | 库名/账号/密码不对，或 `config`、`storage` 不可写 |
-| 页面 500 | 看 PHP 错误日志；别把 `display_errors` 开在生产 |
-| 超长 path 报 400 / 414 | 加大 Nginx header buffer，见 `nginx/rewrite.conf` |
-| 跳转 404 | path 必须纯 `e`；或这个长度还没生成/已禁用 |
-| 后台登不进去 | 密码错，或同 IP 1 分钟超 8 次被限速 |
-| PHP socket 报 502 | `rewrite.conf` 里的 `fastcgi_pass` 和宝塔 PHP 版本不一致 |
-| 伪静态没生效 | 运行目录是否真的是 `public`；规则是否写进当前站点 Nginx |
+| `SQLSTATE[HY093]` | 已修复：插入语句里不能重复使用同一个 PDO 占位符。`git pull` 后重试 |
+| 一直跳 `/install/` | 缺配置或锁文件，或目录不可写 |
+| 安装失败 | 库账号不对，或 `config`/`storage` 不可写 |
+| 500 | 看 PHP 日志，生产环境不要开 `display_errors` |
+| 400 / 414 | 加大 Nginx header buffer |
+| 404 跳转 | path 不是纯 e，或该长度未生成/已禁用 |
+| 登录失败 | 密码错或 1 分钟超 8 次 |
+| 502 | `fastcgi_pass` 与 PHP 版本不一致 |
+| 伪静态无效 | 运行目录不是 `public` |
+| `ERR_SSL_PROTOCOL_ERROR` | 站点证书未部署，见上文 HTTPS |
 
 ---
 
-## 开源协议
+## 协议
 
-MIT License，见 [LICENSE](LICENSE)。
+MIT，见 [LICENSE](LICENSE)。
