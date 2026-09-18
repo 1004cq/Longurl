@@ -1,96 +1,62 @@
 # EEEE Long URL
 
-[English](README.md) · [中文](README.zh-CN.md)
+A deliberately long-URL generator. The generated path contains only the letter `e`, and the number of `e` characters is the unique link ID.
 
-Make URLs longer on purpose. This is **not** a URL shortener.
+This is not a shortener.
 
-The generated path contains **only the letter `e`**. The number of `e` characters is the unique ID. No random letters or digits.
+- Input: `https://example.com/test`
+- Output: `https://your-domain.example/eeeeeeeeee` (10 e's)
 
-```
-Original:  https://example.com/test
-Generated: https://your-domain.example/eeeeeeeeee
-```
-
-That path has 10 `e` characters, so the row in the database is `e_length = 10`.  
-If 10 is taken, the app tries 11, 12, … until it finds a free length.
-
-When someone opens a pure-`e` path:
-
-- Found and enabled → `302` to the target URL, click recorded
-- Missing / disabled / expired → custom 404 (“This e is lost.”)
-- Any non-`e` character in the path → also 404
-
----
+> Security note: never commit `config/local.php`. The installer creates it outside the web root and stores database credentials, the admin password hash, and the API token.
 
 ## Features
 
-- Home page generator: paste a URL, pick or type a length (8–5000; shortcuts 50 / 100 / 200 / 500 / 1000 / 2000)
-- Live preview of final URL length
-- Copy / Open; Enter to submit; loading and error states
-- Auto-prefix `https://`; only public `http` / `https` targets
-- Admin: dashboard, link search / enable / disable / delete, visit logs, API notes
-- API: `POST /api/create` with a token
-- Web installer at `/install/`, locked after setup
-
----
-
-## Stack
-
-| Item | Requirement |
-|---|---|
-| Language | PHP 8.3 / 8.4 / 8.5 (`strict_types`) |
-| Database | MySQL 5.7+ / 8.x, InnoDB, utf8mb4 |
-| Web server | Nginx (aaPanel / BT Panel friendly) |
-| Dependencies | No Node.js, no Composer |
-| PHP extensions | `pdo` `pdo_mysql` `mbstring` `openssl` `json` `session` `filter` |
-
----
+- Pure-`e` long URLs
+- Automatic collision handling when a requested length is already taken
+- 302 redirects
+- Click counting and visit logs
+- Responsive bilingual (English/中文) admin dashboard and link management
+- API for creating links
+- CSRF protection and session-based admin authentication
+- Per-IP rate limiting for creation, API, and login
+- 7/30-day analytics, Top Links, pagination and CSV exports\n- Editable targets and expiration times\n- API token rotation and admin password change from the UI\n- Web installer
+- No Composer, Node.js, or framework dependency
 
 ## Layout
 
 ```
-.
-├── config/
-│   └── local.php.example    # sample; real local.php is created by the installer and is gitignored
-├── public/                 # web root (Nginx root)
-│   ├── index.php             # front door: home / redirect / API
-│   ├── admin/                # admin UI
-│   ├── install/              # installer
-│   └── assets/               # CSS / JS
-├── src/                    # application code
-│   ├── bootstrap.php
-│   ├── Database.php
-│   ├── LinkService.php
-│   ├── Auth.php
-│   ├── RateLimiter.php
-│   ├── Helpers.php
-│   └── views/
-├── sql/schema.sql          # tables
-├── nginx/rewrite.conf      # Nginx / aaPanel rewrite
-├── storage/                # installed.lock after setup
-├── LICENSE                 # MIT
-├── README.md               # English
-└── README.zh-CN.md         # Chinese
+config/          # local.php generated on install (outside web root)
+public/          # web root
+  index.php
+  admin/
+  install/
+  assets/
+src/
+sql/schema.sql
+nginx/rewrite.conf
+storage/
 ```
 
-Suggested paths on the server:
+Suggested server layout:
 
 ```
-/www/wwwroot/YOUR_DOMAIN/e/          # project root
-/www/wwwroot/YOUR_DOMAIN/e/public    # website document root
+/www/wwwroot/YOUR_DOMAIN/e/
+  public/   ← Nginx root
+  config/
+  src/
+  ...
 ```
 
-Keep `config/` and `src/` outside the document root. Never put secrets under `public/`.
+## Requirements
 
----
+- Ubuntu + Nginx
+- PHP 8.3 / 8.4 / 8.5
+- PHP extensions: `pdo`, `pdo_mysql`, `mbstring`, `openssl`, `json`, `session`, `filter`
+- MySQL 5.7+ / 8.x
+- No Node.js
+- No Composer
 
-## Install
-
-### 1. Upload the code
-
-Place the repo under the project directory, for example `/www/wwwroot/YOUR_DOMAIN/e/`.
-
-### 2. Create the database
+## MySQL
 
 ```sql
 CREATE DATABASE eeee_longurl CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -99,17 +65,7 @@ GRANT ALL PRIVILEGES ON eeee_longurl.* TO 'eeee_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-Replace `CHANGE_ME`. The installer imports `sql/schema.sql`; you usually do not import it by hand.
-
-Tables:
-
-- `links` — e length, target URL, clicks, enabled flag, timestamps
-- `click_logs` — IP, user agent, referer, URI, time
-- `rate_limits` — create / API / login throttling
-
-### 3. Permissions
-
-On aaPanel the PHP user is usually `www`:
+## Permissions
 
 ```bash
 chown -R www:www /www/wwwroot/YOUR_DOMAIN/e
@@ -117,84 +73,79 @@ chmod 750 /www/wwwroot/YOUR_DOMAIN/e/config
 chmod 750 /www/wwwroot/YOUR_DOMAIN/e/storage
 ```
 
-PHP must be able to write:
-
-- `config/local.php` (created at install)
-- `storage/installed.lock` (locks the installer)
-
-### 4. Website in aaPanel / Nginx
-
-1. Create the site. Set the **document root** to `.../e/public`, not the project root.
-2. Choose PHP 8.x.
-3. Paste `nginx/rewrite.conf` into the site rewrite / Nginx config.
-4. Reload Nginx.
-
-Change `fastcgi_pass` in `nginx/rewrite.conf` to the socket for your PHP version. Common aaPanel values:
+After installation, the installer attempts to set:
 
 ```
-unix:/tmp/php-cgi-85.sock
-unix:/tmp/php-cgi-84.sock
-unix:/tmp/php-cgi-80.sock
+config/local.php          0640
+storage/installed.lock    0640
 ```
 
-Very long paths (1000+ `e`) need larger header buffers. The sample config already has:
+## Nginx / 宝塔
+
+Set the website root to:
+
+```
+/www/wwwroot/YOUR_DOMAIN/e/public
+```
+
+For 宝塔/BT Panel, put only the rewrite rule from `nginx/rewrite.conf` into **网站 → 设置 → 伪静态**:
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+```
+
+Do not paste a second PHP/FastCGI `location ~ \.php$` block if the panel already manages PHP for the site.
+
+For very long paths (for example 1000–5000 e's), you may also need larger URI/header buffers in the site's `server {}` configuration:
 
 ```nginx
 large_client_header_buffers 8 32k;
 client_header_buffer_size 16k;
 ```
 
-### 5. Web installer
+Then reload Nginx.
 
-Open:
+## Install
 
-```
-https://YOUR_DOMAIN/install/
-```
+1. Open `https://YOUR_DOMAIN/install/`
+2. Enter database settings, the root website URL, and an admin password
+3. The installer validates the URL, imports `sql/schema.sql`, creates `config/local.php`, and writes `storage/installed.lock`
+4. Open `/admin/`
 
-Fields:
-
-| Field | Meaning |
-|---|---|
-| DB host / port | Usually `127.0.0.1` and `3306` |
-| DB name / user / password | The database from step 2 |
-| Website URL | Public base URL with `https://`, no trailing slash |
-| Admin password | Stored with `password_hash` |
-
-The installer will:
-
-1. Test the database connection
-2. Import tables
-3. Write `config/local.php`
-4. Generate an API token
-5. Write `storage/installed.lock` and disable itself
-
-Then sign in at `/admin/`.
-
-The API token lives only in `config/local.php` on the server. **Do not commit that file.**
-
----
-
-## API
+The website URL must be the site root, for example:
 
 ```
-POST /api/create
+https://eeeeeeeeeeeeee.ee
 ```
 
-Authenticate with any one of:
+Do not enter a URL with a sub-path such as `https://example.com/test`.
 
-- Header: `Authorization: Bearer YOUR_TOKEN`
-- Header: `X-API-Token: YOUR_TOKEN`
-- Form field: `token`
+## Admin V2\n\nThe admin console includes:\n\n- English / 中文 language switcher\n- Total / active links and click counters\n- 7-day and 30-day traffic views\n- Top Links for the selected period\n- Search and pagination\n- Edit destination URL and expiration time\n- Enable / disable / delete links\n- CSV export for links and click logs\n- API token copy / rotation\n- Admin password change\n- Base URL and min/max e-length settings\n\nNo database migration is required for these V2 features.\n\n## API
 
-Parameters:
+`POST /api/create`
 
-| Field | Meaning |
-|---|---|
-| `url` | Target URL |
-| `length` | Desired number of `e` characters |
+Use one of these authentication headers:
 
-Success:
+```http
+Authorization: Bearer YOUR_TOKEN
+```
+
+or:
+
+```http
+X-API-Token: YOUR_TOKEN
+```
+
+The token is intentionally **not accepted in the query string**, to reduce accidental leakage through browser history, referrers, analytics, and access logs.
+
+Body fields:
+
+- `url`
+- `length`
+
+Example response:
 
 ```json
 {
@@ -205,49 +156,47 @@ Success:
 }
 ```
 
-On failure `success` is `false`. HTTP status may be 400, 401, or 429.
+## Long-link allocation
 
----
+The link ID is the path length.
 
-## Admin
+If 100 e's is already used and a new request asks for length 100, the service advances to the next free length (101, 102, ...).
 
-URL: `/admin/`
+A unique database index on `links.e_length` is the final concurrency guard. If two requests race for the same free length, the losing request retries with the next candidate instead of failing.
 
-- Dashboard — link count, total clicks, clicks today, recent links, recent visits
-- Links — search, enable, disable, delete
-- Analytics — IP, UA, referer, URI, time
-- API / Settings — notes only; rotate the token or password in `config/local.php` on the server
+## Troubleshooting
 
----
+- **500 after install:** check `config/local.php` permissions and the PHP error log.
+- **Installer cannot write config:** `config/` and `storage/` must be writable by the PHP user.
+- **Long path returns 414 / 400:** increase Nginx header/URI buffers.
+- **Redirect loop to `/install/`:** `storage/installed.lock` or `config/local.php` is missing.
+- **Admin login fails:** default rate limit is 8 attempts per minute per IP.
+- **PDO error / Service unavailable:** verify database credentials and that `pdo_mysql` is installed.
+- **Pure-e link returns 404:** confirm the Nginx rewrite rule and make sure the website root points to `public/`.
+- **Mixed-character paths 404:** expected behavior; only `/e+` resolves.
 
 ## Security
 
 - PDO prepared statements
-- `htmlspecialchars` on output
-- URLs validated with `FILTER_VALIDATE_URL`; only `http`/`https`; no `javascript:`, `data:`, `file:`, private IPs, or localhost
-- CSRF on forms; session login
-- Cookies: httponly, secure on HTTPS, SameSite=Lax
-- Per-minute limits on create, API, and admin login
-- Detailed PHP errors off in production; DB errors never print credentials
-- Admin password stored as a hash only
+- `htmlspecialchars` on HTML output
+- Destination URL allow-list: only `http` / `https`
+- Local/private literal IPs rejected as destinations
+- CSRF protection on frontend, admin, and installer forms
+- `password_hash` / `password_verify`
+- Session cookie: HttpOnly, SameSite=Lax, Secure on HTTPS
+- API token via headers only
+- Rate limits on create, API, and admin login
+- Config stored outside the public directory
+- Installer lock file after successful setup
+- Database credentials are never printed in production errors
 
----
+## Deployment update
 
-## Troubleshooting
+If updating an existing installation, keep these files before replacing code:
 
-| Symptom | What to check |
-|---|---|
-| Always redirected to `/install/` | Missing `config/local.php` or `storage/installed.lock`; write permissions |
-| Install failed | Wrong DB credentials, or `config` / `storage` not writable |
-| HTTP 500 | PHP error log; keep `display_errors` off in production |
-| Long path returns 400 / 414 | Raise Nginx header buffers; see `nginx/rewrite.conf` |
-| Redirect 404 | Path must be only `e`, or that length is unused / disabled |
-| Cannot sign in | Wrong password, or more than 8 attempts per minute per IP |
-| 502 from PHP | `fastcgi_pass` socket does not match the selected PHP version |
-| Rewrite not working | Document root must be `public`; rules must be on this site |
+```
+config/local.php
+storage/installed.lock
+```
 
----
-
-## License
-
-MIT License. See [LICENSE](LICENSE).
+Do not overwrite them with example files.
