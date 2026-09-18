@@ -1,126 +1,53 @@
 (() => {
   const form = document.getElementById('gen-form');
+  const body = document.body;
   if (!form) return;
-
-  const url = document.getElementById('url');
-  const length = document.getElementById('length');
-  const range = document.getElementById('length-range');
-  const lenLabel = document.getElementById('len-label');
-  const preview = document.getElementById('preview');
-  const err = document.getElementById('err');
-  const result = document.getElementById('result');
-  const outUrl = document.getElementById('out-url');
-  const outLen = document.getElementById('out-len');
-  const outTarget = document.getElementById('out-target');
-  const copyBtn = document.getElementById('copy');
-  const openBtn = document.getElementById('open');
-  const submit = document.getElementById('submit');
+  const $ = (id) => document.getElementById(id);
+  const url = $('url'), length = $('length'), range = $('length-range');
+  const lenLabel = $('len-label'), preview = $('preview'), err = $('err');
+  const result = $('result'), outUrl = $('out-url'), outLen = $('out-len'), outTarget = $('out-target');
+  const copyBtn = $('copy'), openBtn = $('open'), submit = $('submit'), pasteBtn = $('paste');
   const ticks = document.querySelectorAll('[data-len]');
-  const base = document.body.dataset.base || '';
-  const labels = {
-    generate: document.body.dataset.generate || 'Generate long URL',
-    generating: document.body.dataset.generating || 'Generating…',
-    copy: document.body.dataset.copy || 'Copy',
-    copied: document.body.dataset.copied || 'Copied',
-  };
-
-  const min = parseInt(length?.min || range?.min || '8', 10);
-  const max = parseInt(length?.max || range?.max || '5000', 10);
-
+  const base = body.dataset.base || window.location.origin;
+  const labels = { generate: body.dataset.generate || 'Generate long URL', generating: body.dataset.generating || 'Generating…', copy: body.dataset.copy || 'Copy', copied: body.dataset.copied || 'Copied' };
+  const min = parseInt(length.min || range.min || '8', 10), max = parseInt(length.max || range.max || '5000', 10);
   const clamp = (n) => Math.min(max, Math.max(min, n));
-
-  const normalize = (v) => {
-    v = (v || '').trim();
-    if (!v) return '';
-    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) v = 'https://' + v;
-    return v;
-  };
-
+  const normalize = (v) => { v = (v || '').trim(); if (!v) return ''; return /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`; };
   const setLength = (raw) => {
     const n = clamp(parseInt(String(raw), 10) || min);
-    length.value = String(n);
-    if (range) range.value = String(n);
-    if (lenLabel) lenLabel.textContent = n + ' e';
+    length.value = String(n); range.value = String(n); lenLabel.innerHTML = `${n} <small>e</small>`;
     ticks.forEach((x) => x.classList.toggle('active', x.dataset.len === String(n)));
-    if (preview) {
-      preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 36)) + (n > 36 ? '…' : '') + `  ·  ${n} e`;
-    }
+    const ratio = ((n - min) / Math.max(1, max - min)) * 100;
+    range.style.setProperty('--range-progress', `${ratio}%`);
+    preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 42)) + (n > 42 ? '…' : '') + `  ·  ${n} e`;
   };
-
-  ticks.forEach((p) => {
-    p.addEventListener('click', () => setLength(p.dataset.len));
-  });
-
-  const syncFromRange = () => {
-    if (!range) return;
-    setLength(range.value);
-    range.setAttribute('aria-valuetext', range.value + ' e');
+  const updateUrl = () => {
+    const value = url.value.trim();
+    $('url-count').textContent = value.length;
+    $('url-state').textContent = value ? (normalize(value).startsWith('https://') && !/^https:\/\//i.test(value) ? 'https:// will be added automatically' : 'Ready to transform') : 'https:// will be added automatically';
+    url.closest('.url-field').classList.toggle('has-value', !!value);
   };
-
-  // Keep both displayed values and the preview changing live while the thumb moves.
-  range?.addEventListener('input', syncFromRange, { passive: true });
-  range?.addEventListener('change', syncFromRange);
-
-  length.addEventListener('input', () => {
-    const raw = length.value.trim();
-    if (raw === '') return;
-
-    const n = clamp(parseInt(raw, 10) || min);
-    if (range) {
-      range.value = String(n);
-      range.setAttribute('aria-valuetext', n + ' e');
-    }
-    if (lenLabel) lenLabel.textContent = n + ' e';
-    ticks.forEach((x) => x.classList.toggle('active', x.dataset.len === String(n)));
-    if (preview) {
-      preview.textContent = `${base}/` + 'e'.repeat(Math.min(n, 36)) + (n > 36 ? '…' : '') + `  ·  ${n} e`;
-    }
-  });
-
+  ticks.forEach((tick) => tick.addEventListener('click', () => setLength(tick.dataset.len)));
+  range.addEventListener('input', () => setLength(range.value), { passive: true });
+  length.addEventListener('input', () => { if (length.value !== '') setLength(length.value); });
   length.addEventListener('change', () => setLength(length.value));
-  setLength(length.value || '100');
+  url.addEventListener('input', updateUrl);
+  url.addEventListener('keydown', (event) => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') form.requestSubmit(); });
+  pasteBtn?.addEventListener('click', async () => { try { url.value = await navigator.clipboard.readText(); updateUrl(); url.focus(); } catch { url.focus(); } });
+  setLength(length.value || '100'); updateUrl();
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    err.textContent = '';
-    result.classList.remove('show');
-    submit.disabled = true;
-    submit.textContent = labels.generating;
-
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault(); err.textContent = ''; result.classList.remove('show');
+    if (!url.value.trim()) { err.textContent = 'Please enter a URL.'; url.focus(); return; }
+    submit.disabled = true; submit.classList.add('is-loading'); submit.querySelector('.btn-icon').textContent = '…'; submit.querySelector('.btn-label').textContent = labels.generating;
     try {
-      const fd = new FormData(form);
-      fd.set('url', normalize(url.value));
-      fd.set('length', String(clamp(parseInt(length.value, 10) || min)));
-
-      const res = await fetch('/?action=create', {
-        method: 'POST',
-        body: fd,
-        headers: { 'X-Requested-With': 'fetch' },
-      });
-
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Failed');
-
-      outUrl.textContent = data.url;
-      outLen.textContent = data.length + ' e';
-      outTarget.textContent = data.target;
-      openBtn.href = data.url;
-      result.classList.add('show');
-    } catch (ex) {
-      err.textContent = ex instanceof Error ? ex.message : 'Failed';
-    } finally {
-      submit.disabled = false;
-      submit.textContent = labels.generate;
-    }
+      const fd = new FormData(form); fd.set('url', normalize(url.value)); fd.set('length', String(clamp(parseInt(length.value, 10) || min)));
+      const res = await fetch('/?action=create', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
+      const data = await res.json(); if (!data.success) throw new Error(data.error || 'Failed');
+      outUrl.textContent = data.url; outLen.textContent = data.length + ' e'; outTarget.textContent = data.target; openBtn.href = data.url;
+      result.classList.add('show'); result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (ex) { err.textContent = ex instanceof Error ? ex.message : 'Failed'; }
+    finally { submit.disabled = false; submit.classList.remove('is-loading'); submit.querySelector('.btn-icon').textContent = '↗'; submit.querySelector('.btn-label').textContent = labels.generate; }
   });
-
-  copyBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(outUrl.textContent);
-      copyBtn.textContent = labels.copied;
-      setTimeout(() => (copyBtn.textContent = labels.copy), 1200);
-    } catch {
-      copyBtn.textContent = labels.copy;
-    }
-  });
+  copyBtn?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(outUrl.textContent); copyBtn.classList.add('copied'); copyBtn.querySelector('span').textContent = '✓'; copyBtn.querySelector('.btn-label').textContent = labels.copied; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.querySelector('span').textContent = '⧉'; copyBtn.querySelector('.btn-label').textContent = labels.copy; }, 1600); } catch {} });
 })();

@@ -11,7 +11,7 @@
 #length-range::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255,255,255,.12);
+  background: linear-gradient(90deg, #d5ff55 0 var(--range-progress, 0%), rgba(255,255,255,.12) var(--range-progress, 0%) 100%);
 }
 #length-range::-webkit-slider-thumb {
   appearance: none;
@@ -28,6 +28,7 @@
   border-radius: 999px;
   background: rgba(255,255,255,.12);
 }
+#length-range::-moz-range-progress { height: 6px; border-radius: 999px; background: #d5ff55; }
 #length-range::-moz-range-thumb {
   width: 22px;
   height: 22px;
