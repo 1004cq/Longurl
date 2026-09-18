@@ -10,6 +10,7 @@ define('LOCK_FILE', BASE_PATH . '/storage/installed.lock');
 require_once BASE_PATH . '/src/Helpers.php';
 require_once BASE_PATH . '/src/Database.php';
 require_once BASE_PATH . '/src/Auth.php';
+require_once BASE_PATH . '/src/I18n.php';
 require_once BASE_PATH . '/src/RateLimiter.php';
 require_once BASE_PATH . '/src/LinkService.php';
 
@@ -23,10 +24,12 @@ function app_config(): array
     if (!is_file(CONFIG_FILE)) {
         throw new RuntimeException('Missing configuration.');
     }
+
     $config = require CONFIG_FILE;
     if (!is_array($config)) {
         throw new RuntimeException('Invalid configuration.');
     }
+
     return $config;
 }
 
@@ -37,3 +40,4 @@ function app_boot_prod(): void
 }
 
 Auth::start();
+I18n::init();
