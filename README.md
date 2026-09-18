@@ -15,11 +15,11 @@ This is not a shortener.
 - Automatic collision handling when a requested length is already taken
 - 302 redirects
 - Click counting and visit logs
-- Admin dashboard and link management
+- Responsive bilingual (English/中文) admin dashboard and link management
 - API for creating links
 - CSRF protection and session-based admin authentication
 - Per-IP rate limiting for creation, API, and login
-- Web installer
+- 7/30-day analytics, Top Links, pagination and CSV exports\n- Editable targets and expiration times\n- API token rotation and admin password change from the UI\n- Web installer
 - No Composer, Node.js, or framework dependency
 
 ## Layout
@@ -122,7 +122,7 @@ https://eeeeeeeeeeeeee.ee
 
 Do not enter a URL with a sub-path such as `https://example.com/test`.
 
-## API
+## Admin V2\n\nThe admin console includes:\n\n- English / 中文 language switcher\n- Total / active links and click counters\n- 7-day and 30-day traffic views\n- Top Links for the selected period\n- Search and pagination\n- Edit destination URL and expiration time\n- Enable / disable / delete links\n- CSV export for links and click logs\n- API token copy / rotation\n- Admin password change\n- Base URL and min/max e-length settings\n\nNo database migration is required for these V2 features.\n\n## API
 
 `POST /api/create`
 
