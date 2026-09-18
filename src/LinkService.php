@@ -30,12 +30,13 @@ final class LinkService
             try {
                 $stmt = $this->pdo->prepare(
                     'INSERT INTO links (e_length, target_url, clicks, enabled, created_at, updated_at)
-                     VALUES (:len, :url, 0, 1, :now, :now)'
+                     VALUES (:len, :url, 0, 1, :created_at, :updated_at)'
                 );
                 $stmt->execute([
                     ':len' => $length,
                     ':url' => $url,
-                    ':now' => $now,
+                    ':created_at' => $now,
+                    ':updated_at' => $now,
                 ]);
 
                 return [
