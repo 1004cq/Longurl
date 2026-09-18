@@ -1,61 +1,63 @@
 # EEEE Long URL
 
-用更长的链接替换真实 URL。这不是短链接。
+[English](README.md) · [中文](README.zh-CN.md)
 
-生成出来的 path **只能全是字母 `e`**。用「有多少个 e」作为唯一 ID，不用随机字符串。
+Make URLs longer on purpose. This is **not** a URL shortener.
+
+The generated path contains **only the letter `e`**. The number of `e` characters is the unique ID. No random letters or digits.
 
 ```
-原始：  https://example.com/test
-生成：  https://your-domain.example/eeeeeeeeee
+Original:  https://example.com/test
+Generated: https://your-domain.example/eeeeeeeeee
 ```
 
-上面这条的 path 有 10 个 `e`。数据库里 `e_length = 10` 就对应这条记录。  
-如果 10 已被占用，系统会自动试 11、12、…直到找到空位。
+That path has 10 `e` characters, so the row in the database is `e_length = 10`.  
+If 10 is taken, the app tries 11, 12, … until it finds a free length.
 
-访问这个全 e path 时：
+When someone opens a pure-`e` path:
 
-- 找到且已启用 → `302` 跳到目标 URL，并记录点击
-- 找不到 / 已禁用 / 已过期 → 自定义 404（This e is lost.）
-- path 里出现任何非 `e` 的字符 → 也是 404
+- Found and enabled → `302` to the target URL, click recorded
+- Missing / disabled / expired → custom 404 (“This e is lost.”)
+- Any non-`e` character in the path → also 404
 
 ---
 
-## 功能
+## Features
 
-- 首页生成长链接：输入 URL、选择或手填长度（0–5000，快捷 50 / 100 / 200 / 500 / 1000 / 2000）
-- 实时预览最终链接长度
-- 复制 / 打开；Enter 提交；Loading 与错误提示
-- URL 自动补 `https://`；只允许公网 `http` / `https`
-- 后台：Dashboard、链接管理（搜索/启用/禁用/删除）、访问日志、API 说明
-- API：`POST /api/create`，需 Token
-- Web 安装器：`/install/`，安装完锁定
+- Home page generator: paste a URL, pick or type a length (8–5000; shortcuts 50 / 100 / 200 / 500 / 1000 / 2000)
+- Live preview of final URL length
+- Copy / Open; Enter to submit; loading and error states
+- Auto-prefix `https://`; only public `http` / `https` targets
+- Admin: dashboard, link search / enable / disable / delete, visit logs, API notes
+- API: `POST /api/create` with a token
+- Web installer at `/install/`, locked after setup
 
 ---
 
-## 技术栈
+## Stack
 
-|\u9879目|要求|
+| Item | Requirement |
 |---|---|
-|语言|PHP 8.3 / 8.4 / 8.5（声明 `strict_types`）|
-|数据库|MySQL 5.7+ / 8.x，InnoDB，utf8mb4|
-|网站|Nginx（宝塔可直接用）|
-|依赖|不要 Node.js，不要 Composer|
-|扩展|`pdo` `pdo_mysql` `mbstring` `openssl` `json` `session` `filter`|
+| Language | PHP 8.3 / 8.4 / 8.5 (`strict_types`) |
+| Database | MySQL 5.7+ / 8.x, InnoDB, utf8mb4 |
+| Web server | Nginx (aaPanel / BT Panel friendly) |
+| Dependencies | No Node.js, no Composer |
+| PHP extensions | `pdo` `pdo_mysql` `mbstring` `openssl` `json` `session` `filter` |
 
 ---
 
-## 目录说明
+## Layout
 
 ```
 .
 ├── config/
-│   └── local.php.example    #范例；真实 local.php 由安装器生成，不入仓
-├── public/                 #站点运行目录（Nginx root）
-│   ├── index.php             #唯一入口：首页 / 跳转 / API
-│   ├── admin/                #后台
-│   ├── install/              #安装器
-│   └── assets/               #CSS / JS
-├── src/                    #业务代码
+│   └── local.php.example    # sample; real local.php is created by the installer and is gitignored
+├── public/                 # web root (Nginx root)
+│   ├── index.php             # front door: home / redirect / API
+│   ├── admin/                # admin UI
+│   ├── install/              # installer
+│   └── assets/               # CSS / JS
+├── src/                    # application code
 │   ├── bootstrap.php
 │   ├── Database.php
 │   ├── LinkService.php
@@ -63,31 +65,32 @@
 │   ├── RateLimiter.php
 │   ├── Helpers.php
 │   └── views/
-├── sql/schema.sql          #建表
-├── nginx/rewrite.conf      #宝塔/伪静态
-├── storage/                #安装锁 installed.lock
-├── LICENSE                 #MIT
-└── README.md
+├── sql/schema.sql          # tables
+├── nginx/rewrite.conf      # Nginx / aaPanel rewrite
+├── storage/                # installed.lock after setup
+├── LICENSE                 # MIT
+├── README.md               # English
+└── README.zh-CN.md         # Chinese
 ```
 
-建议服务器落盘路径：
+Suggested paths on the server:
 
 ```
-/www/wwwroot/YOUR_DOMAIN/e/          #项目根
-/www/wwwroot/YOUR_DOMAIN/e/public    #网站运行目录
+/www/wwwroot/YOUR_DOMAIN/e/          # project root
+/www/wwwroot/YOUR_DOMAIN/e/public    # website document root
 ```
 
-`config/` 和 `src/` 不在 Web 根目录内。不要把密码写进 `public/`。
+Keep `config/` and `src/` outside the document root. Never put secrets under `public/`.
 
 ---
 
-## 安装步骤
+## Install
 
-### 1. 上传代码
+### 1. Upload the code
 
-把仓库内容放到服务器项目目录，例如 `/www/wwwroot/YOUR_DOMAIN/e/`。
+Place the repo under the project directory, for example `/www/wwwroot/YOUR_DOMAIN/e/`.
 
-### 2. 建 MySQL 库
+### 2. Create the database
 
 ```sql
 CREATE DATABASE eeee_longurl CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -96,17 +99,17 @@ GRANT ALL PRIVILEGES ON eeee_longurl.* TO 'eeee_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-把 `CHANGE_ME` 换成自己的密码。表结构由安装器自动导入 `sql/schema.sql`，一般不用手动导。
+Replace `CHANGE_ME`. The installer imports `sql/schema.sql`; you usually do not import it by hand.
 
-表：
+Tables:
 
-- `links` — e 长度、目标 URL、点击数、启用状态、时间
-- `click_logs` — IP、UA、Referer、URI、时间
-- `rate_limits` — 接口 / 登录限速
+- `links` — e length, target URL, clicks, enabled flag, timestamps
+- `click_logs` — IP, user agent, referer, URI, time
+- `rate_limits` — create / API / login throttling
 
-### 3. 权限
+### 3. Permissions
 
-宝塔运行用户一般是 `www`：
+On aaPanel the PHP user is usually `www`:
 
 ```bash
 chown -R www:www /www/wwwroot/YOUR_DOMAIN/e
@@ -114,19 +117,19 @@ chmod 750 /www/wwwroot/YOUR_DOMAIN/e/config
 chmod 750 /www/wwwroot/YOUR_DOMAIN/e/storage
 ```
 
-PHP 必须能写：
+PHP must be able to write:
 
-- `config/local.php`（安装时生成）
-- `storage/installed.lock`（安装完锁定）
+- `config/local.php` (created at install)
+- `storage/installed.lock` (locks the installer)
 
-### 4. 宝塔站点
+### 4. Website in aaPanel / Nginx
 
-1. 新建站点，**运行目录**选 `.../e/public`，不是项目根
-2. PHP 选 8.x
-3. 伪静态 / Nginx 配置粘贴 `nginx/rewrite.conf`
-4. 重载 Nginx
+1. Create the site. Set the **document root** to `.../e/public`, not the project root.
+2. Choose PHP 8.x.
+3. Paste `nginx/rewrite.conf` into the site rewrite / Nginx config.
+4. Reload Nginx.
 
-`nginx/rewrite.conf` 里的 `fastcgi_pass` 要改成你机器实际 PHP socket。宝塔里常见：
+Change `fastcgi_pass` in `nginx/rewrite.conf` to the socket for your PHP version. Common aaPanel values:
 
 ```
 unix:/tmp/php-cgi-85.sock
@@ -134,41 +137,41 @@ unix:/tmp/php-cgi-84.sock
 unix:/tmp/php-cgi-80.sock
 ```
 
-长 path（1000+ 个 e）需要更大的 header 缓冲，规则里已写：
+Very long paths (1000+ `e`) need larger header buffers. The sample config already has:
 
 ```nginx
 large_client_header_buffers 8 32k;
 client_header_buffer_size 16k;
 ```
 
-### 5. Web 安装
+### 5. Web installer
 
-浏览器打开：
+Open:
 
 ```
 https://YOUR_DOMAIN/install/
 ```
 
-填：
+Fields:
 
-| 字段 | 说明 |
+| Field | Meaning |
 |---|---|
-| DB host / port | 一般 `127.0.0.1` 和 `3306` |
-| DB name / user / password | 上一步建的库 |
-| Website URL | 对外访问的完整根地址，带 `https://`，不要末尾斜杠 |
-| Admin password | 后台登录密码，会存 `password_hash` |
+| DB host / port | Usually `127.0.0.1` and `3306` |
+| DB name / user / password | The database from step 2 |
+| Website URL | Public base URL with `https://`, no trailing slash |
+| Admin password | Stored with `password_hash` |
 
-安装器会：
+The installer will:
 
-1. 测试数据库
-2. 导入表
-3. 写 `config/local.php`
-4. 生成 API Token
-5. 写 `storage/installed.lock` 锁死安装器
+1. Test the database connection
+2. Import tables
+3. Write `config/local.php`
+4. Generate an API token
+5. Write `storage/installed.lock` and disable itself
 
-安装完后打开 `/admin/` 登录。
+Then sign in at `/admin/`.
 
-API Token 只在服务器的 `config/local.php` 里，**不要提交到 Git**。
+The API token lives only in `config/local.php` on the server. **Do not commit that file.**
 
 ---
 
@@ -178,20 +181,20 @@ API Token 只在服务器的 `config/local.php` 里，**不要提交到 Git**。
 POST /api/create
 ```
 
-验证任意一种：
+Authenticate with any one of:
 
-- Header：`Authorization: Bearer YOUR_TOKEN`
-- Header：`X-API-Token: YOUR_TOKEN`
-- 表单字段：`token`
+- Header: `Authorization: Bearer YOUR_TOKEN`
+- Header: `X-API-Token: YOUR_TOKEN`
+- Form field: `token`
 
-参数：
+Parameters:
 
-| 字段 | 说明 |
+| Field | Meaning |
 |---|---|
-| `url` | 目标地址 |
-| `length` | 希望的 e 个数 |
+| `url` | Target URL |
+| `length` | Desired number of `e` characters |
 
-成功：
+Success:
 
 ```json
 {
@@ -202,49 +205,49 @@ POST /api/create
 }
 ```
 
-失败时 `success` 为 `false`，HTTP 状态可能是 400 / 401 / 429。
+On failure `success` is `false`. HTTP status may be 400, 401, or 429.
 
 ---
 
-## 后台
+## Admin
 
-地址：`/admin/`
+URL: `/admin/`
 
-- Dashboard：链接总数、总点击、今日点击、最近生成、最近访问
-- Links：搜索、启用、禁用、删除
-- Analytics：IP、UA、Referer、URI、时间
-- API / Settings：说明；轮换 Token 或密码请直接改服务器上的 `config/local.php`
-
----
-
-## 安全
-
-- PDO 预编译，不拼 SQL
-- 页面输出 `htmlspecialchars`
-- URL：`FILTER_VALIDATE_URL`，仅 `http`/`https`，拒绝 `javascript:` `data:` `file:` 以及私网 IP / localhost
-- 表单 CSRF；Session 登录
-- Cookie：httponly、HTTPS 下 secure、SameSite=Lax
-- 生成接口 / API / 后台登录都有每分钟限速
-- 生产环境关闭详细 PHP 错误；数据库异常不会把账密打到页面
-- 管理密码只存 hash
+- Dashboard — link count, total clicks, clicks today, recent links, recent visits
+- Links — search, enable, disable, delete
+- Analytics — IP, UA, referer, URI, time
+- API / Settings — notes only; rotate the token or password in `config/local.php` on the server
 
 ---
 
-## 常见问题
+## Security
 
-| 现象 | 处理 |
+- PDO prepared statements
+- `htmlspecialchars` on output
+- URLs validated with `FILTER_VALIDATE_URL`; only `http`/`https`; no `javascript:`, `data:`, `file:`, private IPs, or localhost
+- CSRF on forms; session login
+- Cookies: httponly, secure on HTTPS, SameSite=Lax
+- Per-minute limits on create, API, and admin login
+- Detailed PHP errors off in production; DB errors never print credentials
+- Admin password stored as a hash only
+
+---
+
+## Troubleshooting
+
+| Symptom | What to check |
 |---|---|
-| 一直跳到 `/install/` | 缺 `config/local.php` 或 `storage/installed.lock`，检查写入权限 |
-| 安装失败 | 库名/账号/密码不对，或 `config`、`storage` 不可写 |
-| 页面 500 | 看 PHP 错误日志；别把 `display_errors` 开在生产 |
-| 超长 path 报 400 / 414 | 加大 Nginx header buffer，见 `nginx/rewrite.conf` |
-| 跳转 404 | path 必须纯 `e`；或这个长度还没生成/已禁用 |
-| 后台登不进去 | 密码错，或同 IP 1 分钟超 8 次被限速 |
-| PHP socket 报 502 | `rewrite.conf` 里的 `fastcgi_pass` 和宝塔 PHP 版本不一致 |
-| 伪静态没生效 | 运行目录是否真的是 `public`；规则是否写进当前站点 Nginx |
+| Always redirected to `/install/` | Missing `config/local.php` or `storage/installed.lock`; write permissions |
+| Install failed | Wrong DB credentials, or `config` / `storage` not writable |
+| HTTP 500 | PHP error log; keep `display_errors` off in production |
+| Long path returns 400 / 414 | Raise Nginx header buffers; see `nginx/rewrite.conf` |
+| Redirect 404 | Path must be only `e`, or that length is unused / disabled |
+| Cannot sign in | Wrong password, or more than 8 attempts per minute per IP |
+| 502 from PHP | `fastcgi_pass` socket does not match the selected PHP version |
+| Rewrite not working | Document root must be `public`; rules must be on this site |
 
 ---
 
-## 开源协议
+## License
 
-MIT License，见 [LICENSE](LICENSE)。
+MIT License. See [LICENSE](LICENSE).
