@@ -166,6 +166,17 @@ final class LinkService
         ];
     }
 
+    public function periodClicks(int $days): int
+    {
+        $days = max(1, min($days, 90));
+        $start = (new DateTimeImmutable('today'))->modify('-' . ($days - 1) . ' days');
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM click_logs WHERE clicked_at >= :start');
+        $stmt->execute([':start' => $start->format('Y-m-d 00:00:00')]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     public function dailyClicks(int $days = 7): array
     {
         $days = max(1, min($days, 90));
@@ -199,6 +210,28 @@ final class LinkService
         return $result;
     }
 
+    public function topLinks(int $days = 7, int $limit = 10): array
+    {
+        $days = max(1, min($days, 90));
+        $limit = max(1, min($limit, 50));
+        $start = (new DateTimeImmutable('today'))->modify('-' . ($days - 1) . ' days');
+
+        $stmt = $this->pdo->prepare(
+            'SELECT l.id, l.e_length, l.target_url, COUNT(c.id) AS period_clicks
+             FROM links l
+             JOIN click_logs c ON c.link_id = l.id
+             WHERE c.clicked_at >= :start
+             GROUP BY l.id, l.e_length, l.target_url
+             ORDER BY period_clicks DESC, l.id DESC
+             LIMIT :lim'
+        );
+        $stmt->bindValue(':start', $start->format('Y-m-d 00:00:00'));
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
     public function recentLinks(int $limit = 20): array
     {
         $stmt = $this->pdo->prepare('SELECT * FROM links ORDER BY id DESC LIMIT :lim');
@@ -210,6 +243,8 @@ final class LinkService
 
     public function recentClicks(int $limit = 30): array
     {
+        $limit = max(1, min($limit, 500));
+
         $sql = 'SELECT c.*, l.e_length, l.target_url
                 FROM click_logs c
                 JOIN links l ON l.id = c.link_id
@@ -225,6 +260,7 @@ final class LinkService
 
     public function searchLinks(string $q, int $page = 1, int $per = 20): array
     {
+        $per = max(5, min($per, 100));
         $offset = max(0, ($page - 1) * $per);
         $where = '';
         $params = [];
@@ -238,6 +274,10 @@ final class LinkService
         $count = $this->pdo->prepare("SELECT COUNT(*) FROM links {$where}");
         $count->execute($params);
         $total = (int) $count->fetchColumn();
+
+        $maxPage = max(1, (int) ceil($total / $per));
+        $page = min(max(1, $page), $maxPage);
+        $offset = ($page - 1) * $per;
 
         $sql = "SELECT * FROM links {$where} ORDER BY id DESC LIMIT :lim OFFSET :off";
         $stmt = $this->pdo->prepare($sql);
@@ -255,7 +295,54 @@ final class LinkService
             'total' => $total,
             'page' => $page,
             'per' => $per,
+            'pages' => $maxPage,
         ];
+    }
+
+    public function exportLinks(string $q = '', int $limit = 10000): array
+    {
+        $limit = max(1, min($limit, 50000));
+        $where = '';
+        $params = [];
+
+        if ($q !== '') {
+            $where = 'WHERE target_url LIKE :q OR CAST(e_length AS CHAR) = :exact';
+            $params[':q'] = '%' . $q . '%';
+            $params[':exact'] = $q;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT id, e_length, target_url, clicks, enabled, created_at, updated_at, expires_at
+             FROM links {$where}
+             ORDER BY id DESC
+             LIMIT :lim"
+        );
+
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public function exportClicks(int $limit = 10000): array
+    {
+        $limit = max(1, min($limit, 50000));
+
+        $stmt = $this->pdo->prepare(
+            'SELECT c.id, c.clicked_at, c.ip, c.user_agent, c.referer, c.request_uri,
+                    l.e_length, l.target_url
+             FROM click_logs c
+             JOIN links l ON l.id = c.link_id
+             ORDER BY c.id DESC
+             LIMIT :lim'
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
     public function updateLink(int $id, string $targetUrl, ?string $expiresAt): void
