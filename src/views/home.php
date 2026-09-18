@@ -20,6 +20,7 @@ $maxLen = (int) ($config['app']['max_length'] ?? 5000);
   <meta property="og:description" content="<?= Helpers::h($desc) ?>">
   <meta property="og:type" content="website">
   <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/slider.css">
 </head>
 <body
   data-base="<?= Helpers::h($base) ?>"
