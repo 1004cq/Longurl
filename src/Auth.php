@@ -8,6 +8,7 @@ final class Auth
         if (session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
+
         $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
         session_set_cookie_params([
             'lifetime' => 0,
@@ -36,10 +37,12 @@ final class Auth
         if (!$limiter->hit('login', (int) ($config['rate']['login_per_minute'] ?? 8))) {
             return false;
         }
+
         $hash = (string) ($config['admin']['password_hash'] ?? '');
         if ($hash === '' || !password_verify($password, $hash)) {
             return false;
         }
+
         session_regenerate_id(true);
         $_SESSION['admin_ok'] = true;
         return true;
@@ -48,10 +51,20 @@ final class Auth
     public static function logout(): void
     {
         $_SESSION = [];
+
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'] ?? '', (bool) $p['secure'], (bool) $p['httponly']);
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $p['path'],
+                $p['domain'] ?? '',
+                (bool) $p['secure'],
+                (bool) $p['httponly']
+            );
         }
+
         session_destroy();
     }
 
@@ -61,14 +74,18 @@ final class Auth
         if ($expected === '') {
             return false;
         }
-        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+
         $token = '';
-        if (preg_match('/Bearer\s+(.+)/i', $header, $m)) {
+        $authorization = trim((string) ($_SERVER['HTTP_AUTHORIZATION'] ?? ''));
+
+        if (preg_match('/^Bearer\s+(.+)$/i', $authorization, $m)) {
             $token = trim($m[1]);
         }
+
         if ($token === '') {
-            $token = (string) ($_POST['token'] ?? $_GET['token'] ?? ($_SERVER['HTTP_X_API_TOKEN'] ?? ''));
+            $token = trim((string) ($_SERVER['HTTP_X_API_TOKEN'] ?? ''));
         }
+
         return $token !== '' && hash_equals($expected, $token);
     }
 }
