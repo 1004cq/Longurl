@@ -21,40 +21,119 @@ final class LinkService
             throw new InvalidArgumentException("Length must be between {$min} and {$max}.");
         }
 
-        $candidate = $wantedLength;
+        $radii = [0, 4, 12, 32, 64, 128, 256];
+        $tried = [];
 
-        while ($candidate <= $max) {
-            $length = $this->nextFreeLength($candidate, $max);
-            $now = Helpers::now();
+        foreach ($radii as $radius) {
+            for ($attempt = 0; $attempt < 8; $attempt++) {
+                $length = $this->pickNearbyFreeLength($wantedLength, $min, $max, $radius, $tried);
+                if ($length === null) {
+                    break;
+                }
+                $tried[$length] = true;
 
+                try {
+                    return $this->insertLink($url, $length);
+                } catch (PDOException $e) {
+                    if (!$this->isDuplicateKey($e)) {
+                        throw $e;
+                    }
+                }
+            }
+        }
+
+        $fallback = $wantedLength;
+        while ($fallback <= $max) {
+            $length = $this->nextFreeLength($fallback, $max);
+            if (isset($tried[$length])) {
+                $fallback = $length + 1;
+                continue;
+            }
             try {
-                $stmt = $this->pdo->prepare(
-                    'INSERT INTO links (e_length, target_url, clicks, enabled, created_at, updated_at)
-                     VALUES (:len, :url, 0, 1, :created_at, :updated_at)'
-                );
-                $stmt->execute([
-                    ':len' => $length,
-                    ':url' => $url,
-                    ':created_at' => $now,
-                    ':updated_at' => $now,
-                ]);
-
-                return [
-                    'id' => (int) $this->pdo->lastInsertId(),
-                    'length' => $length,
-                    'target' => $url,
-                    'url' => Helpers::longUrl($this->config, $length),
-                ];
+                return $this->insertLink($url, $length);
             } catch (PDOException $e) {
                 if (!$this->isDuplicateKey($e)) {
                     throw $e;
                 }
-
-                $candidate = $length + 1;
+                $tried[$length] = true;
+                $fallback = $length + 1;
             }
         }
 
         throw new RuntimeException('No free e-length available in the allowed range.');
+    }
+
+    private function insertLink(string $url, int $length): array
+    {
+        $now = Helpers::now();
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO links (e_length, target_url, clicks, enabled, created_at, updated_at)
+             VALUES (:len, :url, 0, 1, :created_at, :updated_at)'
+        );
+        $stmt->execute([
+            ':len' => $length,
+            ':url' => $url,
+            ':created_at' => $now,
+            ':updated_at' => $now,
+        ]);
+
+        return [
+            'id' => (int) $this->pdo->lastInsertId(),
+            'length' => $length,
+            'target' => $url,
+            'url' => Helpers::longUrl($this->config, $length),
+        ];
+    }
+
+    private function pickNearbyFreeLength(int $wanted, int $min, int $max, int $radius, array $tried): ?int
+    {
+        $low = max($min, $wanted - $radius);
+        $high = min($max, $wanted + $radius);
+        if ($low > $high) {
+            return null;
+        }
+
+        $used = $this->usedLengthsInRange($low, $high);
+        $free = [];
+        for ($n = $low; $n <= $high; $n++) {
+            if (!isset($used[$n]) && !isset($tried[$n])) {
+                $free[] = $n;
+            }
+        }
+        if ($free === []) {
+            return null;
+        }
+
+        usort($free, static function (int $a, int $b) use ($wanted): int {
+            $da = abs($a - $wanted);
+            $db = abs($b - $wanted);
+            if ($da === $db) {
+                return $a <=> $b;
+            }
+            return $da <=> $db;
+        });
+
+        $nearCount = min(count($free), max(4, $radius + 1));
+        $pool = array_slice($free, 0, $nearCount);
+
+        return $pool[random_int(0, count($pool) - 1)];
+    }
+
+    private function usedLengthsInRange(int $low, int $high): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT e_length FROM links WHERE e_length >= :low AND e_length <= :high'
+        );
+        $stmt->execute([
+            ':low' => $low,
+            ':high' => $high,
+        ]);
+
+        $used = [];
+        while ($row = $stmt->fetch()) {
+            $used[(int) $row['e_length']] = true;
+        }
+        return $used;
     }
 
     private function isDuplicateKey(PDOException $e): bool
