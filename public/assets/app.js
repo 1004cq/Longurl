@@ -12,6 +12,23 @@
   const normalize = (value) => { const v = String(value || '').trim(); return v && /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : (v ? `https://${v}` : ''); };
   const langUrl = (next) => `${window.location.pathname}?lang=${next}`;
 
+  // iOS/Safari can still rubber-band even with CSS overscroll-behavior.
+  // Keep normal page scrolling, but block dragging beyond the real document edges.
+  let touchStartY = 0;
+  document.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) touchStartY = event.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchmove', (event) => {
+    if (event.touches.length !== 1) return;
+    const y = event.touches[0].clientY;
+    const delta = y - touchStartY;
+    const root = document.scrollingElement || document.documentElement;
+    const maxScroll = Math.max(0, root.scrollHeight - root.clientHeight);
+    const atTop = root.scrollTop <= 0;
+    const atBottom = root.scrollTop >= maxScroll - 1;
+    if ((atTop && delta > 0) || (atBottom && delta < 0)) event.preventDefault();
+  }, { passive: false });
+
   createApp({
     setup() {
       const url = ref(''), length = ref(100), loading = ref(false), error = ref(''), result = ref(null), copied = ref(false);

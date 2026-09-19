@@ -590,3 +590,84 @@ html.js-ready body:not(.is-ready) .footer { opacity:0; transform:translateY(18px
   .generator-card form { margin-top:18px; }
   .footer { margin-top:16px; }
 }
+
+
+/* Mobile polish v3: edge-lock friendly layout + stronger glass/acid hierarchy. */
+html {
+  min-height: 100%;
+  background: var(--bg);
+  overscroll-behavior: none;
+}
+body.eeee-app {
+  min-height: 100%;
+  background-attachment: fixed;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+.eeee-app #app {
+  min-height: 100dvh;
+}
+.eeee-app .generator-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(213,255,85,.13);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.025) 62%),
+    radial-gradient(120% 95% at 0% 0%, rgba(213,255,85,.055), transparent 48%);
+}
+.eeee-app .generator-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(115deg, rgba(255,255,255,.08), transparent 28%, transparent 72%, rgba(213,255,85,.035));
+  opacity: .72;
+}
+.eeee-app .generator-card > * { position: relative; z-index: 1; }
+.home-hero h1 em {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(110deg, #646871 15%, #aeb5bf 48%, #62666e 80%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: hero-metal 7s ease-in-out infinite;
+}
+@keyframes hero-metal {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.preview-line {
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 11px;
+  padding: 10px 11px;
+  background: rgba(0,0,0,.17);
+}
+.generate-btn {
+  box-shadow: 0 14px 36px rgba(213,255,85,.12), inset 0 1px 0 rgba(255,255,255,.28);
+}
+@media (max-width:600px) {
+  body.eeee-app { padding-bottom: 0; }
+  .eeee-app #app { min-height: 100svh; }
+  .wrap {
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .hero { margin: 62px 0 24px; }
+  .hero h1 { margin-top: 14px; margin-bottom: 10px; line-height: .9; }
+  .hero p { font-size: 14px; }
+  .generator-card { padding: 16px; border-radius: 19px; }
+  .generator-card form { margin-top: 18px; }
+  .url-field input { padding: 14px 0!important; }
+  .field-note { margin: 7px 2px 21px; }
+  .len-wrap { margin-top: 13px; }
+  .preview-line { margin: 14px 0; padding: 8px 9px; }
+  .generate-btn { min-height: 47px; }
+  .footer { margin-top: 13px; }
+  #eeee-scene { opacity: .78; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-hero h1 em { animation: none; }
+}
