@@ -52,6 +52,19 @@ bool AllowedUrl(string value) {
 
 app.MapGet("/", () => Results.Text("EEEE Long URL — C#\n"));
 
+app.MapGet("/healthz", async () => {
+    try {
+        await using var conn = new MySqlConnection(cs);
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT 1";
+        await cmd.ExecuteScalarAsync();
+        return Results.Json(new { ok = true, db = true });
+    } catch {
+        return Results.Json(new { ok = false, db = false }, statusCode: 503);
+    }
+});
+
 app.MapPost("/api/create", async (HttpRequest req) => {
     if (!Authorized(req)) return Results.Json(new { success = false, error = "Unauthorized" }, statusCode: 401);
 
