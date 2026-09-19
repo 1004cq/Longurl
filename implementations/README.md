@@ -1,30 +1,31 @@
 # Alternate language implementations
 
-The PHP application in the repository root remains the primary/complete EEEE implementation.
+The PHP app in the repository root is the complete product (UI, admin, installer).
 
-This directory contains compatible backend implementations in other languages. They all use the same MySQL tables from `/sql/schema.sql` and the same core rules:
+This folder holds optional compatible backends for API + pure-`e` redirects. They share `/sql/schema.sql`.
 
-- only pure-`e` paths are valid long links
-- the number of `e` characters is the unique ID
-- if a requested length is occupied, try the next free length
-- redirect with HTTP 302
-- only `http` and `https` destination URLs are accepted
-- `POST /api/create` requires an API token
-- click count and click logs are recorded
+Rules:
+- path may contain only the letter `e`
+- unique ID is `e_length`
+- requested length is preferred; if taken, pick a free nearby length at random
+- unique-index collisions retry
+- HTTP 302 + click log
+- only public http/https targets
+- `POST /api/create` needs a token (`Authorization: Bearer`, `X-API-Token`, or form `token`)
 
-Environment variables used by all implementations:
+Placeholders only — never commit a real domain or password:
 
 ```
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_NAME=admin
-DB_USER=admin
-DB_PASS=YOUR_DB_PASSWORD
-BASE_URL=https://eeeeeeeeeeeeee.ee
+DB_NAME=eeee_longurl
+DB_USER=eeee_user
+DB_PASS=CHANGE_ME
+BASE_URL=https://your-domain.example
 API_TOKEN=CHANGE_ME
 MIN_LENGTH=8
 MAX_LENGTH=5000
 PORT=8080
 ```
 
-The alternate versions intentionally focus on the core generator/API/redirect path so you can compare languages without duplicating the entire PHP admin UI. The existing PHP admin can still manage the same MySQL database.
+Do not point the live PHP site at these services unless you intend to replace the document root.

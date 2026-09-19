@@ -4,10 +4,10 @@ services:
     environment: &common
       DB_HOST: host.docker.internal
       DB_PORT: "3306"
-      DB_NAME: admin
-      DB_USER: admin
+      DB_NAME: eeee_longurl
+      DB_USER: eeee_user
       DB_PASS: CHANGE_ME
-      BASE_URL: https://eeeeeeeeeeeeee.ee
+      BASE_URL: https://your-domain.example
       API_TOKEN: CHANGE_ME
       MIN_LENGTH: "8"
       MAX_LENGTH: "5000"
