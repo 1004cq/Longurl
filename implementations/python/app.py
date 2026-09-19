@@ -53,6 +53,21 @@ def authorized() -> bool:
         return True
     return bool(API_TOKEN) and request.headers.get("X-API-Token") == API_TOKEN
 
+@app.get("/healthz")
+def healthz():
+    conn = None
+    try:
+        conn = db()
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+        return jsonify(ok=True, db=True)
+    except Exception:
+        return jsonify(ok=False, db=False), 503
+    finally:
+        if conn is not None:
+            conn.close()
+
 @app.post("/api/create")
 def create():
     if not authorized():
