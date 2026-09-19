@@ -5,19 +5,21 @@ import net from "node:net";
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.set("trust proxy", true);
 
 const env = (k: string, d = "") => process.env[k] || d;
 const baseUrl = env("BASE_URL", "http://127.0.0.1:8080").replace(/\/+$/, "");
 const apiToken = env("API_TOKEN");
 const minLen = Number(env("MIN_LENGTH", "8"));
 const maxLen = Number(env("MAX_LENGTH", "5000"));
+const RADII = [0, 4, 12, 32, 64, 128, 256];
 
 const pool = mysql.createPool({
   host: env("DB_HOST", "127.0.0.1"),
   port: Number(env("DB_PORT", "3306")),
-  user: env("DB_USER", "admin"),
+  user: env("DB_USER", "eeee_user"),
   password: env("DB_PASS"),
-  database: env("DB_NAME", "admin"),
+  database: env("DB_NAME", "eeee_longurl"),
   charset: "utf8mb4",
   connectionLimit: 10,
 });
@@ -49,7 +51,40 @@ function authorized(req: express.Request): boolean {
   if (!apiToken) return false;
   const auth = (req.header("Authorization") || "").trim();
   if (/^Bearer\s+/i.test(auth) && auth.replace(/^Bearer\s+/i, "").trim() === apiToken) return true;
-  return req.header("X-API-Token") === apiToken;
+  if (req.header("X-API-Token") === apiToken) return true;
+  const body = req.body || {};
+  return body.token === apiToken;
+}
+
+function clientIp(req: express.Request): string {
+  const xff = (req.header("x-forwarded-for") || "").split(",")[0].trim();
+  return xff || (req.header("x-real-ip") || "").trim() || req.ip || "";
+}
+
+async function usedInRange(low: number, high: number): Promise<Set<number>> {
+  const [rows] = await pool.execute<mysql.RowDataPacket[]>(
+    "SELECT e_length FROM links WHERE e_length>=? AND e_length<=?",
+    [low, high]
+  );
+  return new Set(rows.map((r) => Number(r.e_length)));
+}
+
+async function pickNearby(wanted: number, tried: Set<number>): Promise<number | null> {
+  for (const radius of RADII) {
+    const low = Math.max(minLen, wanted - radius);
+    const high = Math.min(maxLen, wanted + radius);
+    const used = await usedInRange(low, high);
+    const free: number[] = [];
+    for (let n = low; n <= high; n++) {
+      if (!used.has(n) && !tried.has(n)) free.push(n);
+    }
+    if (!free.length) continue;
+    free.sort((a, b) => Math.abs(a - wanted) - Math.abs(b - wanted) || a - b);
+    const poolN = Math.min(free.length, Math.max(4, radius + 1));
+    return free[Math.floor(Math.random() * poolN)];
+  }
+  for (let n = wanted; n <= maxLen; n++) if (!tried.has(n)) return n;
+  return null;
 }
 
 app.get("/healthz", async (_req, res) => {
@@ -63,15 +98,18 @@ app.get("/healthz", async (_req, res) => {
 
 app.post("/api/create", async (req, res) => {
   if (!authorized(req)) return res.status(401).json({ success: false, error: "Unauthorized" });
-
   const target = normalizeUrl(String(req.body.url || ""));
-  const wanted = Number(req.body.length || 50);
+  const wanted = Number(req.body.length || 100);
   if (!allowedUrl(target)) return res.status(400).json({ success: false, error: "Invalid URL" });
   if (!Number.isInteger(wanted) || wanted < minLen || wanted > maxLen) {
     return res.status(400).json({ success: false, error: "Invalid length" });
   }
 
-  for (let candidate = wanted; candidate <= maxLen; candidate++) {
+  const tried = new Set<number>();
+  for (let i = 0; i < 24; i++) {
+    const candidate = await pickNearby(wanted, tried);
+    if (candidate == null) break;
+    tried.add(candidate);
     try {
       const [result] = await pool.execute<mysql.ResultSetHeader>(
         "INSERT INTO links (e_length,target_url,clicks,enabled,created_at,updated_at) VALUES (?,?,0,1,NOW(),NOW())",
@@ -89,7 +127,6 @@ app.post("/api/create", async (req, res) => {
       return res.status(500).json({ success: false, error: "Database error" });
     }
   }
-
   return res.status(409).json({ success: false, error: "No free e-length" });
 });
 
@@ -103,27 +140,15 @@ app.get(/^\/(e+)$/, async (req, res) => {
   );
   const row = rows[0];
   if (!row || !row.enabled || (row.expires_at && new Date(row.expires_at) < new Date())) return res.sendStatus(404);
-
-  const conn = await pool.getConnection();
   try {
-    await conn.beginTransaction();
-    await conn.execute("UPDATE links SET clicks=clicks+1,updated_at=NOW() WHERE id=?", [row.id]);
-    await conn.execute(
+    await pool.execute("UPDATE links SET clicks=clicks+1,updated_at=NOW() WHERE id=?", [row.id]);
+    await pool.execute(
       "INSERT INTO click_logs (link_id,clicked_at,ip,user_agent,referer,request_uri) VALUES (?,NOW(),?,?,?,?)",
-      [row.id, req.ip || "", (req.get("user-agent") || "").slice(0, 512), (req.get("referer") || "").slice(0, 1024), req.originalUrl.slice(0, 2048)]
+      [row.id, clientIp(req), (req.get("user-agent") || "").slice(0, 512), (req.get("referer") || "").slice(0, 1024), req.originalUrl.slice(0, 2048)]
     );
-    await conn.commit();
-  } catch {
-    await conn.rollback();
-  } finally {
-    conn.release();
-  }
-
+  } catch {}
   return res.redirect(302, row.target_url);
 });
 
 app.use((_req, res) => res.sendStatus(404));
-
-app.listen(Number(env("PORT", "8080")), "0.0.0.0", () => {
-  console.log("Longurl Node listening");
-});
+app.listen(Number(env("PORT", "8080")), "0.0.0.0", () => console.log("Longurl Node listening"));
