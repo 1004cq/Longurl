@@ -42,6 +42,16 @@ public class Application {
         return "EEEE Long URL — Java\n";
     }
 
+    @GetMapping(value = "/healthz", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> healthz() {
+        try {
+            Integer one = db.queryForObject("SELECT 1", Integer.class);
+            return ResponseEntity.ok(Map.of("ok", one != null, "db", one != null));
+        } catch (Exception e) {
+            return ResponseEntity.status(503).body(Map.of("ok", false, "db", false));
+        }
+    }
+
     @PostMapping(value = "/api/create", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> create(
             @RequestHeader HttpHeaders headers,
