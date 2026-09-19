@@ -52,6 +52,15 @@ function authorized(req: express.Request): boolean {
   return req.header("X-API-Token") === apiToken;
 }
 
+app.get("/healthz", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    return res.json({ ok: true, db: true });
+  } catch {
+    return res.status(503).json({ ok: false, db: false });
+  }
+});
+
 app.post("/api/create", async (req, res) => {
   if (!authorized(req)) return res.status(401).json({ success: false, error: "Unauthorized" });
 
