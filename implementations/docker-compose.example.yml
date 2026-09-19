@@ -1,0 +1,40 @@
+services:
+  go:
+    build: ./go
+    environment: &common
+      DB_HOST: host.docker.internal
+      DB_PORT: "3306"
+      DB_NAME: admin
+      DB_USER: admin
+      DB_PASS: CHANGE_ME
+      BASE_URL: https://eeeeeeeeeeeeee.ee
+      API_TOKEN: CHANGE_ME
+      MIN_LENGTH: "8"
+      MAX_LENGTH: "5000"
+      PORT: "8080"
+    ports: ["8081:8080"]
+
+  python:
+    build: ./python
+    environment: *common
+    ports: ["8082:8080"]
+
+  node:
+    build: ./node
+    environment: *common
+    ports: ["8083:8080"]
+
+  rust:
+    build: ./rust
+    environment: *common
+    ports: ["8084:8080"]
+
+  java:
+    build: ./java
+    environment: *common
+    ports: ["8085:8080"]
+
+  csharp:
+    build: ./csharp
+    environment: *common
+    ports: ["8086:8080"]
