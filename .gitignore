@@ -1,9 +1,10 @@
-/config/local.php
-/storage/installed.lock
-/storage/*.log
+.env
 .DS_Store
 *.swp
-.env
+
+longurl
+dist/
+coverage/
 
 __pycache__/
 *.py[cod]
