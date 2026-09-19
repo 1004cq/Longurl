@@ -58,7 +58,11 @@ func loadDotEnv(path string) map[string]string {
 		k = strings.TrimSpace(k)
 		v = strings.TrimSpace(v)
 		if len(v) >= 2 && ((v[0] == '"' && v[len(v)-1] == '"') || (v[0] == '\'' && v[len(v)-1] == '\'')) {
-			v = v[1 : len(v)-1]
+			if unquoted, err := strconv.Unquote(v); err == nil {
+				v = unquoted
+			} else {
+				v = v[1 : len(v)-1]
+			}
 		}
 		out[k] = v
 	}
