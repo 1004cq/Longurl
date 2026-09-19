@@ -527,3 +527,66 @@ html.js-ready body:not(.is-ready) .footer { opacity:0; transform:translateY(18px
   #eeee-scene { opacity:.62; }
   .eeee-app .hero { margin-top:82px; }
 }
+
+
+/* Device matrix: phone portrait, phone landscape, tablet, desktop and ultrawide. */
+@media (min-width:601px) and (max-width:1024px) {
+  .wrap { width:min(760px, calc(100% - 56px)); padding-top:42px; }
+  .hero { margin-top:82px; }
+  .card { padding:26px; }
+}
+@media (min-width:1280px) {
+  .wrap { width:min(960px, calc(100% - 96px)); }
+  .hero { margin-top:132px; }
+  .generator-card { padding:34px; }
+}
+@media (min-width:1800px) {
+  .wrap { width:1040px; }
+  .hero h1 { font-size:clamp(72px, 6vw, 112px); }
+}
+@media (max-width:600px) {
+  html, body { min-width:320px; }
+  .wrap { width:calc(100% - 28px); padding:24px 0 max(28px, env(safe-area-inset-bottom)); }
+  .topline { gap:12px; }
+  .header-right { gap:8px; min-width:0; }
+  .brand { font-size:11px; letter-spacing:.2em; }
+  .lang-switch a { padding:7px 8px; }
+  .hero { margin:76px 0 30px; }
+  .hero h1 { font-size:clamp(44px, 15vw, 68px); }
+  .hero p { font-size:15px; line-height:1.55; }
+  .card { padding:18px; border-radius:20px; }
+  .card-head, .length-head { gap:10px; }
+  .card h2 { font-size:16px; }
+  .shortcut, .generate-btn kbd { display:none; }
+  .url-field { gap:7px; padding:0 10px; }
+  .url-field input { min-width:0; font-size:14px; }
+  .paste-btn { flex:none; }
+  .field-note { gap:10px; margin-bottom:26px; font-size:10px; }
+  .field-note span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .length-head strong { font-size:25px; }
+  .len-ticks { gap:5px; overflow-x:auto; padding-bottom:3px; scrollbar-width:none; }
+  .len-ticks::-webkit-scrollbar { display:none; }
+  .len-tick { flex:0 0 auto; padding:6px 8px; }
+  .number-field input { font-size:16px; }
+  .preview-line { min-width:0; margin:17px 0; }
+  .preview-line span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .generate-btn { min-height:50px; }
+  .result .meta { flex-wrap:wrap; word-break:break-word; }
+  .result .actions .btn { flex:1 1 130px; }
+  .footer { line-height:1.6; }
+  .lost-hero { margin-top:92px; }
+  .lost-card { gap:18px; }
+}
+@media (max-width:380px) {
+  .wrap { width:calc(100% - 20px); }
+  .card { padding:15px; }
+  .hero h1 { font-size:44px; }
+  .card-kicker, .eyebrow { font-size:9px; }
+}
+@media (orientation:landscape) and (max-height:560px) {
+  .wrap { padding-top:18px; padding-bottom:32px; }
+  .hero { margin:34px 0 22px; }
+  .hero h1 { font-size:clamp(40px, 8vw, 64px); }
+  .generator-card form { margin-top:18px; }
+  .footer { margin-top:16px; }
+}

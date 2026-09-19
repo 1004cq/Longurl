@@ -6,8 +6,10 @@
   const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, .1, 2000);
   camera.position.set(0, 1.5, 26);
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
-  renderer.setSize(innerWidth, innerHeight);
+  const viewport = () => ({ width: window.visualViewport?.width || innerWidth, height: window.visualViewport?.height || innerHeight });
+  const mobile = () => Math.min(viewport().width, viewport().height) < 600;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile() ? 1.25 : 1.8));
+  renderer.setSize(viewport().width, viewport().height, false);
   const group = new THREE.Group(); scene.add(group);
   const flying = new THREE.Group(); scene.add(flying);
   const clock = new THREE.Clock();
@@ -49,7 +51,9 @@
     else { camera.position.z += (26 - camera.position.z) * dt * 2; }
     camera.lookAt(0, 0, 0); renderer.render(scene, camera);
   }
-  addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+  const resize = () => { const size = viewport(); camera.aspect = size.width / Math.max(1, size.height); camera.fov = mobile() ? 62 : 55; camera.updateProjectionMatrix(); renderer.setPixelRatio(Math.min(devicePixelRatio, mobile() ? 1.25 : 1.8)); renderer.setSize(size.width, size.height, false); };
+  addEventListener('resize', resize, { passive: true });
+  window.visualViewport?.addEventListener('resize', resize, { passive: true });
   rebuild(100); animate();
   window.EEEEScene = { setLength, success, lost };
 })();
