@@ -50,12 +50,22 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", a.health)
 	mux.HandleFunc("/api/create", a.create)
 	mux.HandleFunc("/", a.route)
 
 	addr := ":" + env("PORT", "8080")
 	log.Printf("Longurl Go listening on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+func (a *app) health(w http.ResponseWriter, r *http.Request) {
+	if err := a.db.PingContext(r.Context()); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w, map[string]any{"ok": false, "db": false})
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "db": true})
 }
 
 func (a *app) route(w http.ResponseWriter, r *http.Request) {
