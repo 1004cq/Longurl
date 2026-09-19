@@ -7,7 +7,7 @@ $csrf = Helpers::csrfToken();
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EEEE Admin</title>
-  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="<?= Helpers::h(Helpers::assetUrl('app.css')) ?>">
 </head>
 <body>
   <div class="wrap" style="max-width:420px">

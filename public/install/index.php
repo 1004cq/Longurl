@@ -99,7 +99,7 @@ if (!$locked && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Install EEEE</title>
-  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="<?= Helpers::h(Helpers::assetUrl('app.css')) ?>">
 </head>
 <body>
   <div class="wrap" style="max-width:560px">

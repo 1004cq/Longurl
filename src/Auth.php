@@ -86,6 +86,11 @@ final class Auth
             $token = trim((string) ($_SERVER['HTTP_X_API_TOKEN'] ?? ''));
         }
 
+        if ($token === '') {
+            $data = Helpers::requestData();
+            $token = trim((string) ($data['token'] ?? ''));
+        }
+
         return $token !== '' && hash_equals($expected, $token);
     }
 }

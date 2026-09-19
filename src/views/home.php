@@ -19,8 +19,8 @@ $maxLen = (int) ($config['app']['max_length'] ?? 5000);
   <meta property="og:title" content="EEEE — Long URL Generator">
   <meta property="og:description" content="<?= Helpers::h($desc) ?>">
   <meta property="og:type" content="website">
-  <link rel="stylesheet" href="/assets/app.css">
-  <link rel="stylesheet" href="/assets/slider.css">
+  <link rel="stylesheet" href="<?= Helpers::h(Helpers::assetUrl('app.css')) ?>">
+  <link rel="stylesheet" href="<?= Helpers::h(Helpers::assetUrl('slider.css')) ?>">
 </head>
 <body
   data-base="<?= Helpers::h($base) ?>"
@@ -109,6 +109,6 @@ $maxLen = (int) ($config['app']['max_length'] ?? 5000);
       <div class="footer"><span>EEEE</span> · <?= Helpers::h(I18n::t('description')) ?><span class="footer-e">e e e</span></div>
     <?php endif; ?>
   </main>
-  <script src="/assets/app.js"></script>
+  <script src="<?= Helpers::h(Helpers::assetUrl('app.js')) ?>"></script>
 </body>
 </html>

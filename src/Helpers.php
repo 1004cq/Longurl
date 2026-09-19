@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 final class Helpers
 {
+    private static ?array $requestData = null;
+
     public static function h(?string $value): string
     {
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -12,8 +14,29 @@ final class Helpers
     {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store, max-age=0');
         echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         exit;
+    }
+
+    public static function requestData(): array
+    {
+        if (self::$requestData !== null) {
+            return self::$requestData;
+        }
+
+        if ($_POST !== []) {
+            return self::$requestData = $_POST;
+        }
+
+        $contentType = strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? ''));
+        if (str_starts_with($contentType, 'application/json')) {
+            $raw = file_get_contents('php://input');
+            $decoded = json_decode($raw ?: '', true);
+            return self::$requestData = is_array($decoded) ? $decoded : [];
+        }
+
+        return self::$requestData = [];
     }
 
     public static function redirect(string $url, int $status = 302): never
@@ -112,5 +135,13 @@ final class Helpers
     public static function longUrl(array $config, int $length): string
     {
         return self::baseUrl($config) . '/' . str_repeat('e', $length);
+    }
+
+    public static function assetUrl(string $asset): string
+    {
+        $asset = ltrim($asset, '/');
+        $path = BASE_PATH . '/public/assets/' . $asset;
+        $version = is_file($path) ? (string) filemtime($path) : '1';
+        return '/assets/' . $asset . '?v=' . rawurlencode($version);
     }
 }

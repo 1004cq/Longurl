@@ -40,7 +40,7 @@ $queryForPage = [
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EEEE Admin</title>
-  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="<?= Helpers::h(Helpers::assetUrl('app.css')) ?>">
 </head>
 <body>
 <div class="layout">
@@ -61,7 +61,10 @@ $queryForPage = [
         <a class="<?= I18n::locale() === 'en' ? 'active' : '' ?>" href="<?= Helpers::h(I18n::switchUrl('en')) ?>">EN</a>
         <a class="<?= I18n::locale() === 'zh' ? 'active' : '' ?>" href="<?= Helpers::h(I18n::switchUrl('zh')) ?>">中文</a>
       </div>
-      <a class="logout" href="/admin/?view=logout"><?= Helpers::h(I18n::t('logout')) ?></a>
+      <form method="post" action="/admin/?view=logout" class="logout-form">
+        <input type="hidden" name="_csrf" value="<?= Helpers::h($csrf) ?>">
+        <button class="logout" type="submit"><?= Helpers::h(I18n::t('logout')) ?></button>
+      </form>
     </div>
   </aside>
 

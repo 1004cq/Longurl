@@ -59,6 +59,9 @@ if (!in_array($view, $allowedViews, true)) {
 }
 
 if ($view === 'logout') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !Helpers::verifyCsrf($_POST['_csrf'] ?? null)) {
+        Helpers::redirect('/admin/?view=login');
+    }
     Auth::logout();
     Helpers::redirect('/admin/?view=login');
 }
@@ -230,15 +233,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $period = (int) ($_GET['period'] ?? 7);
 $period = in_array($period, [7, 30], true) ? $period : 7;
 
-$stats = $links->stats();
-$periodClickCount = $links->periodClicks($period);
-$dailyClicks = $links->dailyClicks($period);
-$topLinks = $links->topLinks($period, 10);
-$recentLinks = $links->recentLinks();
-$recentClicks = $links->recentClicks(50);
+$stats = ['links' => 0, 'clicks' => 0, 'today' => 0, 'active' => 0];
+$periodClickCount = 0;
+$dailyClicks = [];
+$topLinks = [];
+$recentLinks = [];
+$recentClicks = [];
+if ($view === 'dashboard' || $view === 'analytics') {
+    $periodClickCount = $links->periodClicks($period);
+    $dailyClicks = $links->dailyClicks($period);
+    $topLinks = $links->topLinks($period, 10);
+}
+if ($view === 'dashboard') {
+    $stats = $links->stats();
+    $recentLinks = $links->recentLinks();
+    $recentClicks = $links->recentClicks(50);
+} elseif ($view === 'analytics') {
+    $recentClicks = $links->recentClicks(50);
+}
 $q = trim((string) ($_GET['q'] ?? ''));
 $pageNo = max(1, (int) ($_GET['page'] ?? 1));
-$list = $links->searchLinks($q, $pageNo, 20);
+$list = $view === 'links'
+    ? $links->searchLinks($q, $pageNo, 20)
+    : ['rows' => [], 'total' => 0, 'page' => 1, 'pages' => 1];
 $csrf = Helpers::csrfToken();
 
 $editId = max(0, (int) ($_GET['edit'] ?? 0));

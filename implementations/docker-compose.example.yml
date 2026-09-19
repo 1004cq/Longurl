@@ -1,0 +1,22 @@
+services:
+  eeee-python:
+    build:
+      context: ./python
+    environment:
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      API_TOKEN: ${API_TOKEN:?set API_TOKEN}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data/python:/app/data
+    restart: unless-stopped
+
+  # Enable one implementation at a time behind the reverse proxy.
+  # eeee-node:
+  #   build: ./node
+  #   environment:
+  #     APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+  #     API_TOKEN: ${API_TOKEN:?set API_TOKEN}
+  #   ports:
+  #     - "8081:8080"

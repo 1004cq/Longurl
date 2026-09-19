@@ -28,6 +28,7 @@ try {
 
 if ($path === '/api/create' || $path === '/api/create/') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Allow: POST');
         Helpers::json(['success' => false, 'error' => 'Method not allowed'], 405);
     }
     if (!Auth::apiTokenOk($config)) {
@@ -37,12 +38,17 @@ if ($path === '/api/create' || $path === '/api/create/') {
         Helpers::json(['success' => false, 'error' => 'Rate limited'], 429);
     }
     try {
-        $url = (string) ($_POST['url'] ?? '');
-        $length = (int) ($_POST['length'] ?? 50);
+        $data = Helpers::requestData();
+        $url = (string) ($data['url'] ?? '');
+        $length = (int) ($data['length'] ?? 50);
         $created = $links->create($url, $length);
         Helpers::json(['success' => true, 'url' => $created['url'], 'length' => $created['length'], 'target' => $created['target']]);
     } catch (Throwable $e) {
-        Helpers::json(['success' => false, 'error' => $e->getMessage()], 400);
+        if ($e instanceof InvalidArgumentException) {
+            Helpers::json(['success' => false, 'error' => $e->getMessage()], 400);
+        }
+        error_log('API create failed: ' . $e->getMessage());
+        Helpers::json(['success' => false, 'error' => 'Unable to create link right now.'], 500);
     }
 }
 
@@ -59,10 +65,15 @@ if (($_GET['action'] ?? '') === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST
         Helpers::json(['success' => false, 'error' => 'Too many requests'], 429);
     }
     try {
-        $created = $links->create((string) ($_POST['url'] ?? ''), (int) ($_POST['length'] ?? 50));
+        $data = Helpers::requestData();
+        $created = $links->create((string) ($data['url'] ?? ''), (int) ($data['length'] ?? 50));
         Helpers::json(['success' => true, 'url' => $created['url'], 'length' => $created['length'], 'target' => $created['target']]);
     } catch (Throwable $e) {
-        Helpers::json(['success' => false, 'error' => $e->getMessage()], 400);
+        if ($e instanceof InvalidArgumentException) {
+            Helpers::json(['success' => false, 'error' => $e->getMessage()], 400);
+        }
+        error_log('Public create failed: ' . $e->getMessage());
+        Helpers::json(['success' => false, 'error' => 'Unable to create link right now.'], 500);
     }
 }
 
