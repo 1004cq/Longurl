@@ -3,12 +3,12 @@ declare(strict_types=1);
 
 return [
     'db' => [
-        'dsn' => 'mysql:host=127.0.0.1;port=3306;dbname=admin;charset=utf8mb4',
-        'user' => 'admin',
-        'pass' => 'YOUR_DB_PASSWORD',
+        'dsn' => 'mysql:host=127.0.0.1;port=3306;dbname=eeee_longurl;charset=utf8mb4',
+        'user' => 'eeee_user',
+        'pass' => 'CHANGE_ME',
     ],
     'app' => [
-        'base_url' => 'https://example.com',
+        'base_url' => 'https://your-domain.example',
         'min_length' => 8,
         'max_length' => 5000,
         'name' => 'EEEE',
