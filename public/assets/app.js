@@ -27,6 +27,30 @@
     if (!extracted) return '';
     return /^[a-z][a-z0-9+.-]*:\/\//i.test(extracted) ? extracted : `https://${extracted}`;
   };
+  const buildEQr = (text) => {
+    if (typeof qrcode !== 'function') return { ok: false };
+    const payload = String(text || '');
+    if (!payload || payload.length > 2200) return { ok: false };
+    try {
+      const qr = qrcode(0, 'L');
+      qr.addData(payload);
+      qr.make();
+      const n = qr.getModuleCount();
+      const quiet = 2;
+      const rows = [];
+      for (let y = -quiet; y < n + quiet; y++) {
+        let row = '';
+        for (let x = -quiet; x < n + quiet; x++) {
+          const dark = x >= 0 && y >= 0 && x < n && y < n && qr.isDark(y, x);
+          row += dark ? 'e' : ' ';
+        }
+        rows.push(row);
+      }
+      return { ok: true, text: rows.join('\n'), size: n };
+    } catch {
+      return { ok: false };
+    }
+  };
   const langUrl = (next) => `${window.location.pathname}?lang=${next}`;
 
   let touchStartY = 0;
@@ -49,6 +73,7 @@
       const url = ref(''), length = ref(100), loading = ref(false), error = ref(''), result = ref(null), copied = ref(false);
       const preview = computed(() => bare(base) + '/' + 'e'.repeat(Math.min(length.value, 42)) + (length.value > 42 ? '…' : '') + `  ·  ${length.value} e`);
       const displayUrl = computed(() => result.value ? bare(result.value.url) : '');
+      const qr = computed(() => result.value ? buildEQr(result.value.url) : { ok: false });
       const ratio = computed(() => `${((length.value - min) / Math.max(1, max - min)) * 100}%`);
       const setLength = (value) => { length.value = clamp(value); window.EEEEScene?.setLength(length.value); };
       const cleanField = () => {
@@ -104,7 +129,7 @@
         } catch {}
       };
       onMounted(() => { setLength(100); if (isLost) window.EEEEScene?.lost(); document.documentElement.classList.add('js-ready'); requestAnimationFrame(() => body.classList.add('is-ready')); });
-      return { copy, lang, langUrl, isLost, min, max, url, length, loading, error, result, copied, preview, displayUrl, ratio, normalize, setLength, updateUrl, submit, paste, onPaste, copyResult };
+      return { copy, lang, langUrl, isLost, min, max, url, length, loading, error, result, copied, preview, displayUrl, qr, ratio, normalize, setLength, updateUrl, submit, paste, onPaste, copyResult };
     },
     template: `
       <div class="ambient ambient-a" aria-hidden="true"></div><div class="ambient ambient-b" aria-hidden="true"></div>
@@ -112,7 +137,7 @@
       <main class="wrap">
         <header class="topline"><a class="brand" href="/" aria-label="EEEE home"><i></i><span>EEEE</span></a><div class="header-right"><span class="status-dot"><b></b> {{ copy.online }}</span><div class="lang-switch" :aria-label="copy.language"><a :class="{active:lang==='en'}" :href="langUrl('en')">EN</a><a :class="{active:lang==='zh'}" :href="langUrl('zh')">中文</a></div></div></header>
         <template v-if="isLost"><section class="hero lost-hero"><div class="eyebrow"><span>404</span> / {{ copy.lostTitle }}</div><h1><span class="ghost-e">e</span>404</h1><p>{{ copy.lostText }}</p></section><section class="lost-card card"><div class="lost-orbit"><span>e</span><span>e</span><span>e</span></div><div><div class="card-kicker">{{ copy.lostSignal }}</div><p class="muted">{{ copy.lostHint }}</p><a class="btn" href="/"><span>↗</span> {{ copy.backHome }}</a></div></section></template>
-        <template v-else><section class="hero home-hero"><div class="eyebrow"><span class="pulse"></span> {{ copy.eyebrow }}</div><h1>{{ copy.heroTitle }}<br><em>{{ copy.heroAccent }}</em></h1><p>{{ copy.tagline }}</p></section><section class="card generator-card"><div class="card-head"><div><div class="card-kicker">01 / {{ copy.originalUrl }}</div><h2>{{ copy.inputTitle }}</h2></div><span class="shortcut">⌘ ↵</span></div><form @submit.prevent="submit"><div class="url-field" :class="{'has-value':url,'is-valid':/^https?:\\/\\/[^\\s]+$/i.test(normalize(url))}"><span class="field-icon">↗</span><input v-model="url" @input="updateUrl" @paste="onPaste" @keydown.meta.enter="submit" @keydown.ctrl.enter="submit" type="text" placeholder="example.com/your-destination" autocomplete="off" spellcheck="false"><button class="paste-btn" type="button" @click="paste">⌘V</button></div><div class="field-note"><span>{{ url ? copy.validUrl : 'https:// will be added automatically' }}</span><span>{{ url.length }}</span></div><div class="length-head"><div><div class="card-kicker">02 / {{ copy.length }}</div><h2>{{ copy.lengthTitle }}</h2></div><strong id="len-label">{{ length }} <small>e</small></strong></div><div class="len-wrap"><input id="length-range" type="range" :min="min" :max="max" v-model.number="length" @input="setLength(length)" :style="{'--range-progress':ratio}"><div class="len-ticks"><button v-for="n in [50,100,200,500,1000,2000]" v-if="n>=min&&n<=max" type="button" class="len-tick" :class="{active:n===length}" @click="setLength(n)">{{ n }}</button></div><div class="number-field"><input type="number" :min="min" :max="max" v-model.number="length" @input="setLength(length)"><span>e</span></div></div><div class="preview-line"><span class="preview-mark">◎</span><span>{{ preview }}</span></div><button class="btn generate-btn" :class="{'is-loading':loading}" :disabled="loading"><span class="btn-icon">{{ loading ? '◌' : '↗' }}</span><span class="btn-label">{{ loading ? copy.generating : copy.generate }}</span><kbd>⌘↵</kbd></button><div class="err" role="alert">{{ error }}</div></form><div v-if="result" class="result show"><div class="result-head"><div class="card-kicker">{{ copy.longUrl }}</div><span class="success-chip">✓ ready</span></div><div class="longurl">{{ displayUrl }}</div><div class="meta"><span>{{ result.length }} e</span><span class="meta-sep">•</span><span>{{ result.target }}</span></div><div class="actions"><button class="btn" :class="{copied}" type="button" @click="copyResult"><span>{{ copied ? '✓' : '⬠' }}</span> {{ copied ? copy.copied : copy.copy }}</button><a class="btn ghost" :href="result.url" target="_blank" rel="noopener"><span>↗</span> {{ copy.open }}</a></div></div></section><div class="footer"><span>EEEE</span> · {{ copy.description }}<span class="footer-e">e e e</span></div></template>
+        <template v-else><section class="hero home-hero"><div class="eyebrow"><span class="pulse"></span> {{ copy.eyebrow }}</div><h1>{{ copy.heroTitle }}<br><em>{{ copy.heroAccent }}</em></h1><p>{{ copy.tagline }}</p></section><section class="card generator-card"><div class="card-head"><div><div class="card-kicker">01 / {{ copy.originalUrl }}</div><h2>{{ copy.inputTitle }}</h2></div><span class="shortcut">⌘ ↵</span></div><form @submit.prevent="submit"><div class="url-field" :class="{'has-value':url,'is-valid':/^https?:\\/\\/[^\\s]+$/i.test(normalize(url))}"><span class="field-icon">↗</span><input v-model="url" @input="updateUrl" @paste="onPaste" @keydown.meta.enter="submit" @keydown.ctrl.enter="submit" type="text" placeholder="example.com/your-destination" autocomplete="off" spellcheck="false"><button class="paste-btn" type="button" @click="paste">⌘V</button></div><div class="field-note"><span>{{ url ? copy.validUrl : 'https:// will be added automatically' }}</span><span>{{ url.length }}</span></div><div class="length-head"><div><div class="card-kicker">02 / {{ copy.length }}</div><h2>{{ copy.lengthTitle }}</h2></div><strong id="len-label">{{ length }} <small>e</small></strong></div><div class="len-wrap"><input id="length-range" type="range" :min="min" :max="max" v-model.number="length" @input="setLength(length)" :style="{'--range-progress':ratio}"><div class="len-ticks"><button v-for="n in [50,100,200,500,1000,2000]" v-if="n>=min&&n<=max" type="button" class="len-tick" :class="{active:n===length}" @click="setLength(n)">{{ n }}</button></div><div class="number-field"><input type="number" :min="min" :max="max" v-model.number="length" @input="setLength(length)"><span>e</span></div></div><div class="preview-line"><span class="preview-mark">◎</span><span>{{ preview }}</span></div><button class="btn generate-btn" :class="{'is-loading':loading}" :disabled="loading"><span class="btn-icon">{{ loading ? '◌' : '↗' }}</span><span class="btn-label">{{ loading ? copy.generating : copy.generate }}</span><kbd>⌘↵</kbd></button><div class="err" role="alert">{{ error }}</div></form><div v-if="result" class="result show"><div class="result-head"><div class="card-kicker">{{ copy.longUrl }}</div><span class="success-chip">✓ ready</span></div><div class="longurl">{{ displayUrl }}</div><div class="meta"><span>{{ result.length }} e</span><span class="meta-sep">•</span><span>{{ result.target }}</span></div><div class="e-qr-wrap"><div class="card-kicker">{{ copy.qrTitle }}</div><pre v-if="qr.ok" class="e-qr" :class="{huge: qr.size > 60}">{{ qr.text }}</pre><p class="e-qr-note">{{ qr.ok ? copy.qrHint : copy.qrTooLong }}</p></div><div class="actions"><button class="btn" :class="{copied}" type="button" @click="copyResult"><span>{{ copied ? '✓' : '⬠' }}</span> {{ copied ? copy.copied : copy.copy }}</button><a class="btn ghost" :href="result.url" target="_blank" rel="noopener"><span>↗</span> {{ copy.open }}</a></div></div></section><div class="footer"><span>EEEE</span> · {{ copy.description }}<span class="footer-e">e e e</span></div></template>
       </main>`
   }).mount(root);
 })();
