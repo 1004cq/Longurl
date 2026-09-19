@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/hmac"
+	"encoding/csv"
 	"crypto/sha256"
 	"encoding/hex"
 	"html/template"
@@ -20,6 +21,7 @@ type adminLink struct {
 	Clicks    int64
 	Enabled   bool
 	CreatedAt time.Time
+	ExpiresAt string
 	LongURL   string
 }
 
@@ -48,6 +50,7 @@ type adminPageData struct {
 	TotalClicks   int64
 	TodayClicks   int64
 	Links         []adminLink
+	Edit          *adminLink
 	Recent        []adminLog
 	Days          []adminDay
 	APITokenMask  string
@@ -137,6 +140,9 @@ func (a *app) adminRoot(w http.ResponseWriter, r *http.Request) {
 			data.Page = 1
 		}
 		data.Links, data.Pages = a.fetchLinks(data.Query, data.Page, 25)
+		if editID, _ := strconv.ParseInt(r.URL.Query().Get("edit"), 10, 64); editID > 0 {
+			data.Edit = a.fetchLink(editID)
+		}
 	} else {
 		data.Links, _ = a.fetchLinks("", 1, 10)
 	}
@@ -172,7 +178,7 @@ func (a *app) fetchLinks(q string, page, perPage int) ([]adminLink, int) {
 		page = pages
 	}
 	args = append(args, perPage, (page-1)*perPage)
-	rows, err := db.Query("SELECT id,e_length,target_url,clicks,enabled,created_at FROM links"+where+" ORDER BY id DESC LIMIT ? OFFSET ?", args...)
+	rows, err := db.Query("SELECT id,e_length,target_url,clicks,enabled,created_at,expires_at FROM links"+where+" ORDER BY id DESC LIMIT ? OFFSET ?", args...)
 	if err != nil {
 		return nil, pages
 	}
@@ -182,13 +188,37 @@ func (a *app) fetchLinks(q string, page, perPage int) ([]adminLink, int) {
 	var out []adminLink
 	for rows.Next() {
 		var l adminLink
-		if err := rows.Scan(&l.ID, &l.Length, &l.Target, &l.Clicks, &l.Enabled, &l.CreatedAt); err != nil {
+		var expires *time.Time
+		if err := rows.Scan(&l.ID, &l.Length, &l.Target, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires); err != nil {
 			continue
+		}
+		if expires != nil {
+			l.ExpiresAt = expires.Format("2006-01-02 15:04:05")
 		}
 		l.LongURL = strings.TrimRight(cfg.BaseURL, "/") + "/" + strings.Repeat("e", l.Length)
 		out = append(out, l)
 	}
 	return out, pages
+}
+
+func (a *app) fetchLink(id int64) *adminLink {
+	db := a.dbRef()
+	if db == nil {
+		return nil
+	}
+	var l adminLink
+	var expires *time.Time
+	err := db.QueryRow("SELECT id,e_length,target_url,clicks,enabled,created_at,expires_at FROM links WHERE id=? LIMIT 1", id).
+		Scan(&l.ID, &l.Length, &l.Target, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires)
+	if err != nil {
+		return nil
+	}
+	if expires != nil {
+		l.ExpiresAt = expires.Format("2006-01-02 15:04:05")
+	}
+	cfg := a.store.get()
+	l.LongURL = strings.TrimRight(cfg.BaseURL, "/") + "/" + strings.Repeat("e", l.Length)
+	return &l
 }
 
 func (a *app) fetchRecentLogs(limit int) []adminLog {
@@ -248,6 +278,36 @@ func (a *app) fetchDays(days int) []adminDay {
 func (a *app) adminLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{Name: adminCookieName, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 	http.Redirect(w, r, "/admin/login", http.StatusFound)
+}
+
+func (a *app) adminSaveLink(w http.ResponseWriter, r *http.Request) {
+	if !a.requireAdminPost(w, r) {
+		return
+	}
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	target := normalizeURL(r.FormValue("target_url"))
+	if id <= 0 || !allowedURL(target) {
+		http.Error(w, "invalid link", http.StatusBadRequest)
+		return
+	}
+	expiresRaw := strings.TrimSpace(r.FormValue("expires_at"))
+	var expires any
+	if expiresRaw != "" {
+		t, err := time.Parse("2006-01-02 15:04:05", expiresRaw)
+		if err != nil {
+			http.Error(w, "invalid expiry; use YYYY-MM-DD HH:MM:SS", http.StatusBadRequest)
+			return
+		}
+		expires = t
+	}
+	if db := a.dbRef(); db != nil {
+		_, err := db.Exec("UPDATE links SET target_url=?,expires_at=?,updated_at=NOW() WHERE id=?", target, expires, id)
+		if err != nil {
+			http.Error(w, "failed to save link", http.StatusInternalServerError)
+			return
+		}
+	}
+	http.Redirect(w, r, "/admin/?view=links&ok=Link+saved", http.StatusFound)
 }
 
 func (a *app) adminToggle(w http.ResponseWriter, r *http.Request) {
@@ -406,4 +466,89 @@ func maskToken(token string) string {
 		return "••••••••"
 	}
 	return token[:6] + strings.Repeat("•", 20) + token[len(token)-6:]
+}
+
+
+func (a *app) adminExportLinks(w http.ResponseWriter, r *http.Request) {
+	if !a.isAdmin(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	db := a.dbRef()
+	if db == nil {
+		http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	rows, err := db.Query("SELECT id,e_length,target_url,clicks,enabled,created_at,expires_at FROM links ORDER BY id DESC")
+	if err != nil {
+		http.Error(w, "export failed", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=eeee-links.csv")
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{"id", "e_length", "target_url", "clicks", "enabled", "created_at", "expires_at"})
+	for rows.Next() {
+		var id, length, clicks int64
+		var target string
+		var enabled bool
+		var created time.Time
+		var expires *time.Time
+		if rows.Scan(&id, &length, &target, &clicks, &enabled, &created, &expires) != nil {
+			continue
+		}
+		exp := ""
+		if expires != nil {
+			exp = expires.Format("2006-01-02 15:04:05")
+		}
+		_ = cw.Write([]string{strconv.FormatInt(id, 10), strconv.FormatInt(length, 10), csvSafe(target), strconv.FormatInt(clicks, 10), strconv.FormatBool(enabled), created.Format("2006-01-02 15:04:05"), exp})
+	}
+	cw.Flush()
+}
+
+func (a *app) adminExportClicks(w http.ResponseWriter, r *http.Request) {
+	if !a.isAdmin(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	db := a.dbRef()
+	if db == nil {
+		http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	rows, err := db.Query("SELECT c.id,l.e_length,c.clicked_at,c.ip,c.user_agent,c.referer,c.request_uri FROM click_logs c JOIN links l ON l.id=c.link_id ORDER BY c.id DESC LIMIT 50000")
+	if err != nil {
+		http.Error(w, "export failed", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=eeee-clicks.csv")
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{"id", "e_length", "clicked_at", "ip", "user_agent", "referer", "request_uri"})
+	for rows.Next() {
+		var id, length int64
+		var clicked time.Time
+		var ip, ua, ref, uri string
+		if rows.Scan(&id, &length, &clicked, &ip, &ua, &ref, &uri) != nil {
+			continue
+		}
+		_ = cw.Write([]string{strconv.FormatInt(id, 10), strconv.FormatInt(length, 10), clicked.Format("2006-01-02 15:04:05"), csvSafe(ip), csvSafe(ua), csvSafe(ref), csvSafe(uri)})
+	}
+	cw.Flush()
+}
+
+func csvSafe(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@':
+		return "'" + s
+	default:
+		return s
+	}
 }
