@@ -76,11 +76,14 @@ func main() {
 
 	mux.HandleFunc("/admin/login", a.adminLogin)
 	mux.HandleFunc("/admin/logout", a.adminLogout)
+	mux.HandleFunc("/admin/link/save", a.adminSaveLink)
 	mux.HandleFunc("/admin/link/toggle", a.adminToggle)
 	mux.HandleFunc("/admin/link/delete", a.adminDelete)
 	mux.HandleFunc("/admin/settings", a.adminSettings)
 	mux.HandleFunc("/admin/token/rotate", a.adminRotateToken)
 	mux.HandleFunc("/admin/password", a.adminPassword)
+	mux.HandleFunc("/admin/export/links.csv", a.adminExportLinks)
+	mux.HandleFunc("/admin/export/clicks.csv", a.adminExportClicks)
 	mux.HandleFunc("/admin/", a.adminRoot)
 
 	mux.HandleFunc("/", a.route)
