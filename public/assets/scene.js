@@ -23,6 +23,8 @@
   const ambientMaterial = new THREE.SpriteMaterial({ map: eTexture, transparent: true, opacity: .22, depthWrite: false });
   const rand = (n) => (Math.random() - .5) * n;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const pointer = new THREE.Vector2();
+  const pointerTarget = new THREE.Vector2();
   let targetCount = 90, mode = 'home', seed = 0, lastMobile = mobile();
 
   function clear(groupRef) { while (groupRef.children.length) groupRef.remove(groupRef.children[0]); }
@@ -49,6 +51,9 @@
         rise: .22 + Math.random() * .48,
         sway: .18 + Math.random() * .42,
         spin: (Math.random() - .5) * .22,
+        parallax: .12 + ((depth + 8) / 18) * .34,
+        pulse: .65 + Math.random() * .9,
+        baseOpacity: .08 + Math.random() * .22,
       };
       ambient.add(sprite); floaters.push(sprite);
     }
@@ -85,9 +90,13 @@
       const bottom = -top;
       floaters.forEach((s) => {
         s.position.y += s.userData.rise * dt;
-        s.position.x = s.userData.baseX + Math.sin(t * s.userData.speed + s.userData.phase) * s.userData.sway;
+        const parallaxX = pointer.x * s.userData.parallax * (mobile() ? .55 : 1);
+        const parallaxY = pointer.y * s.userData.parallax * .55;
+        s.position.x = s.userData.baseX + Math.sin(t * s.userData.speed + s.userData.phase) * s.userData.sway + parallaxX;
+        s.position.y += parallaxY * dt;
         s.material.rotation += s.userData.spin * dt;
-        s.material.opacity += (0.18 + Math.sin(t * .7 + s.userData.phase) * .09 - s.material.opacity) * dt * .8;
+        const shimmer = Math.sin(t * s.userData.pulse + s.userData.phase) * .08;
+        s.material.opacity += (s.userData.baseOpacity + shimmer - s.material.opacity) * dt * 1.25;
 
         if (s.position.y > top) {
           s.position.y = bottom - Math.random() * 3;
@@ -96,8 +105,14 @@
         }
       });
     }
+    pointer.lerp(pointerTarget, Math.min(1, dt * 2.8));
+    group.rotation.y += ((pointer.x * .018) - group.rotation.y) * dt * 2;
+    ambient.rotation.z += ((pointer.x * .006) - ambient.rotation.z) * dt * 1.5;
+
     if (mode === 'success') { flying.position.x += dt * 9; flying.rotation.z = Math.sin(t * 1.6) * .05; camera.position.z += (42 - camera.position.z) * dt * 1.5; if (flying.position.x > 18) { flying.position.x = -18; camera.position.z = 26; } }
     else { camera.position.z += (26 - camera.position.z) * dt * 2; }
+    camera.position.x += ((pointer.x * (mobile() ? .18 : .34)) - camera.position.x) * dt * 1.6;
+    camera.position.y += ((1.5 - pointer.y * .18) - camera.position.y) * dt * 1.6;
     camera.lookAt(0, 0, 0); renderer.render(scene, camera);
   }
   const resize = () => {
@@ -113,9 +128,21 @@
       rebuildFloaters();
     }
   };
+  const updatePointer = (x, y) => {
+    if (reducedMotion.matches) return;
+    const size = viewport();
+    pointerTarget.set(
+      ((x / Math.max(1, size.width)) - .5) * 2,
+      ((y / Math.max(1, size.height)) - .5) * 2
+    );
+  };
+  addEventListener('pointermove', (event) => updatePointer(event.clientX, event.clientY), { passive: true });
+  addEventListener('pointerleave', () => pointerTarget.set(0, 0), { passive: true });
   addEventListener('resize', resize, { passive: true });
   window.visualViewport?.addEventListener('resize', resize, { passive: true });
-  reducedMotion.addEventListener?.('change', rebuildFloaters);
+  reducedMotion.addEventListener?.('change', () => {
+    pointer.set(0, 0); pointerTarget.set(0, 0); rebuildFloaters();
+  });
   rebuildFloaters(); rebuild(100); animate();
   window.EEEEScene = { setLength, success, lost };
 })();
