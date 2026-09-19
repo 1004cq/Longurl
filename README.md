@@ -32,45 +32,31 @@ The Go binary embeds `public/`, so the production server does not need PHP, PHP-
 
 ## Setup
 
-Copy the environment example:
-
-```bash
-cp .env.example .env
-```
-
-Set your real values on the server only:
-
-```
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=admin
-DB_USER=admin
-DB_PASS=CHANGE_ME
-BASE_URL=https://your-domain.example
-API_TOKEN=CHANGE_ME
-MIN_LENGTH=8
-MAX_LENGTH=5000
-CREATE_PER_MINUTE=20
-API_PER_MINUTE=60
-PORT=8080
-```
-
-Import:
-
-```bash
-mysql -u admin -p admin < sql/schema.sql
-```
-
-Build and run:
+Create the MySQL database/user first. Then build and start Go:
 
 ```bash
 go mod tidy
 go build -o longurl .
-set -a
-. ./.env
-set +a
 ./longurl
 ```
+
+On a fresh install the server starts even without database credentials and redirects the site to:
+
+```
+/install/
+```
+
+The Go installer tests MySQL, imports `sql/schema.sql`, writes `.env` with mode 0640, hashes the admin password, and generates the API/session secrets. No PHP installer is involved.
+
+After installation:
+
+- `/admin/login` — admin sign-in
+- `/admin/` — dashboard
+- Links — search, pagination, edit target/expiry, enable/disable, delete, CSV export
+- Analytics — counters, recent clicks, 7-day activity, click CSV export
+- Settings — base URL, e-length range, rate limits, API-token rotation, password change
+
+You can still provision `.env` manually from `.env.example` instead of using the web installer.
 
 Health check:
 
@@ -105,6 +91,8 @@ The site root no longer needs a PHP runtime directory.
 - `GET /api/config` — public runtime configuration
 - `POST /api/create` — create a long URL
 - `GET /eeee...` — 302 redirect by e-count
+- `GET/POST /install/` — first-run Go installer
+- `GET /admin/` — Go administration console
 - unknown paths — 404 UI
 
 Browser creation is rate-limited. API callers may send `Authorization: Bearer TOKEN` or `X-API-Token`.

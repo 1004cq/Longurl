@@ -32,45 +32,31 @@ Go 二进制会直接嵌入 `public/`，生产环境不再需要 PHP、PHP-FPM�
 
 ## 安装
 
-复制配置：
-
-```bash
-cp .env.example .env
-```
-
-在服务器填写真实配置：
-
-```
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=admin
-DB_USER=admin
-DB_PASS=CHANGE_ME
-BASE_URL=https://your-domain.example
-API_TOKEN=CHANGE_ME
-MIN_LENGTH=8
-MAX_LENGTH=5000
-CREATE_PER_MINUTE=20
-API_PER_MINUTE=60
-PORT=8080
-```
-
-导入数据库：
-
-```bash
-mysql -u admin -p admin < sql/schema.sql
-```
-
-编译运行：
+先在 MySQL 建好数据库和用户，然后编译并启动 Go：
 
 ```bash
 go mod tidy
 go build -o longurl .
-set -a
-. ./.env
-set +a
 ./longurl
 ```
+
+全新安装时，即使还没有数据库配置，Go 也可以启动，并会把网站引导到：
+
+```
+/install/
+```
+
+Go 安装器会测试 MySQL、导入 `sql/schema.sql`、以 0640 权限写入 `.env`、哈希管理员密码，并生成 API Token 和 Session 密钥。整个过程不需要 PHP。
+
+安装完成后：
+
+- `/admin/login` — 后台登录
+- `/admin/` — Dashboard
+- Links — 搜索、分页、编辑目标/过期时间、启用/禁用、删除、CSV 导出
+- Analytics — 点击统计、近期访问、7 天趋势、点击日志 CSV
+- Settings — Base URL、e 长度范围、限流、Token 轮换、密码修改
+
+也可以复制 `.env.example` 后手动配置，不使用 Web 安装器。
 
 健康检查：
 
@@ -105,6 +91,8 @@ client_header_buffer_size 16k;
 - `GET /api/config` — 前端运行配置
 - `POST /api/create` — 生成长链接
 - `GET /eeee...` — 按 e 数量 302 跳转
+- `GET/POST /install/` — Go 首次安装器
+- `GET /admin/` — Go 管理后台
 - 其他路径 — 404 页面
 
 网页生成接口有 IP 限流。外部 API 可以使用：
