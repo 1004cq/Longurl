@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>EEEE — Long URL Generator</title>
+  <meta name="description" content="Generate absurdly long links made only from the letter e.">
+  <meta property="og:title" content="EEEE — Long URL Generator">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/slider.css">
+</head>
+<body class="eeee-app" data-base="__BASE_URL__" data-page="__PAGE__" data-min-length="__MIN_LENGTH__" data-max-length="__MAX_LENGTH__">
+  <canvas id="eeee-scene" aria-hidden="true"></canvas>
+  <div id="app"></div>
+  <script>
+  (() => {
+    const q = new URLSearchParams(location.search);
+    const saved = localStorage.getItem('eeee_lang');
+    const lang = q.get('lang') === 'en' || q.get('lang') === 'zh'
+      ? q.get('lang')
+      : (saved || (navigator.language.startsWith('zh') ? 'zh' : 'en'));
+    localStorage.setItem('eeee_lang', lang);
+    document.documentElement.lang = lang;
+    const copy = {
+      en: {
+        language:'Language', online:'online', eyebrow:'LONG URL GENERATOR',
+        tagline:'Your link is not long enough.', heroTitle:'Make it', heroAccent:'longer.',
+        inputTitle:'Paste your destination', originalUrl:'Original URL', paste:'Paste',
+        validUrl:'Valid URL', lengthTitle:'Choose the e count', length:'Length',
+        generate:'Generate long URL', generating:'Generating…', longUrl:'Long URL',
+        copy:'Copy', copied:'Copied', open:'Open', lostTitle:'Signal lost',
+        lostText:'This e-path does not exist.', lostSignal:'Nothing here',
+        lostHint:'The requested run of e characters is missing, disabled or expired.',
+        backHome:'Back home', description:'A long-URL generator made of e.'
+      },
+      zh: {
+        language:'语言', online:'在线', eyebrow:'超长链接生成器',
+        tagline:'你的链接还不够长。', heroTitle:'让链接', heroAccent:'更长。',
+        inputTitle:'输入目标地址', originalUrl:'原始链接', paste:'粘贴',
+        validUrl:'链接格式有效', lengthTitle:'选择 e 的数量', length:'长度',
+        generate:'生成长链接', generating:'生成中…', longUrl:'长链接',
+        copy:'复制', copied:'已复制', open:'打开', lostTitle:'信号丢失',
+        lostText:'这条 e 链接不存在。', lostSignal:'这里没有内容',
+        lostHint:'请求的 e 长度不存在、已停用或已过期。',
+        backHome:'返回首页', description:'一款只用 e 组成路径的超长链接生成器。'
+      }
+    };
+    window.EEEE_COPY = copy[lang];
+  })();
+  </script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="/assets/scene.js"></script>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
