@@ -14,6 +14,7 @@ import java.util.*;
 @SpringBootApplication
 @RestController
 public class Application {
+    private static final int[] RADII = {0, 4, 12, 32, 64, 128, 256};
     private final JdbcTemplate db;
     private final String baseUrl = env("BASE_URL", "http://127.0.0.1:8080").replaceAll("/+$", "");
     private final String apiToken = System.getenv().getOrDefault("API_TOKEN", "");
@@ -28,8 +29,8 @@ public class Application {
         System.setProperty("server.port", env("PORT", "8080"));
         String host = env("DB_HOST", "127.0.0.1");
         String port = env("DB_PORT", "3306");
-        String name = env("DB_NAME", "admin");
-        String user = env("DB_USER", "admin");
+        String name = env("DB_NAME", "eeee_longurl");
+        String user = env("DB_USER", "eeee_user");
         String pass = System.getenv().getOrDefault("DB_PASS", "");
         System.setProperty("spring.datasource.url", "jdbc:mysql://" + host + ":" + port + "/" + name + "?useUnicode=true&characterEncoding=utf8&serverTimezone=LOCAL");
         System.setProperty("spring.datasource.username", user);
@@ -56,9 +57,10 @@ public class Application {
     public ResponseEntity<?> create(
             @RequestHeader HttpHeaders headers,
             @RequestParam String url,
-            @RequestParam(defaultValue = "50") int length) {
+            @RequestParam(defaultValue = "100") int length,
+            @RequestParam(required = false) String token) {
 
-        if (!authorized(headers)) {
+        if (!authorized(headers, token)) {
             return ResponseEntity.status(401).body(Map.of("success", false, "error", "Unauthorized"));
         }
 
@@ -70,7 +72,11 @@ public class Application {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Invalid length"));
         }
 
-        for (int candidate = length; candidate <= maxLen; candidate++) {
+        Set<Integer> tried = new HashSet<>();
+        for (int i = 0; i < 24; i++) {
+            Integer candidate = pickNearby(length, tried);
+            if (candidate == null) break;
+            tried.add(candidate);
             try {
                 db.update("INSERT INTO links (e_length,target_url,clicks,enabled,created_at,updated_at) VALUES (?,?,0,1,NOW(),NOW())",
                         candidate, target);
@@ -87,13 +93,36 @@ public class Application {
                 return ResponseEntity.status(500).body(Map.of("success", false, "error", "Database error"));
             }
         }
-
         return ResponseEntity.status(409).body(Map.of("success", false, "error", "No free e-length"));
+    }
+
+    private Integer pickNearby(int wanted, Set<Integer> tried) {
+        for (int radius : RADII) {
+            int low = Math.max(minLen, wanted - radius);
+            int high = Math.min(maxLen, wanted + radius);
+            Set<Integer> used = new HashSet<>();
+            for (Integer n : db.query("SELECT e_length FROM links WHERE e_length>=? AND e_length<=?", (rs, rowNum) -> rs.getInt(1), low, high)) {
+                used.add(n);
+            }
+            List<Integer> free = new ArrayList<>();
+            for (int n = low; n <= high; n++) {
+                if (!used.contains(n) && !tried.contains(n)) free.add(n);
+            }
+            if (free.isEmpty()) continue;
+            free.sort(Comparator.comparingInt((Integer n) -> Math.abs(n - wanted)).thenComparingInt(n -> n));
+            int pool = Math.min(free.size(), Math.max(4, radius + 1));
+            return free.get(new Random().nextInt(pool));
+        }
+        for (int n = wanted; n <= maxLen; n++) {
+            if (!tried.contains(n)) return n;
+        }
+        return null;
     }
 
     @GetMapping("/{path:e+}")
     public ResponseEntity<Void> resolve(
             @PathVariable String path,
+            @RequestHeader HttpHeaders headers,
             @RequestHeader(value = "User-Agent", defaultValue = "") String ua,
             @RequestHeader(value = "Referer", defaultValue = "") String referer) {
 
@@ -112,23 +141,27 @@ public class Application {
 
         long id = ((Number) row.get("id")).longValue();
         String target = String.valueOf(row.get("target_url"));
+        String ip = Optional.ofNullable(headers.getFirst("X-Forwarded-For")).orElse("");
+        if (ip.contains(",")) ip = ip.split(",")[0].trim();
+        if (ip.isBlank()) ip = Optional.ofNullable(headers.getFirst("X-Real-IP")).orElse("");
         try {
             db.update("UPDATE links SET clicks=clicks+1,updated_at=NOW() WHERE id=?", id);
             db.update(
                     "INSERT INTO click_logs (link_id,clicked_at,ip,user_agent,referer,request_uri) VALUES (?,NOW(),?,?,?,?)",
-                    id, "", truncate(ua, 512), truncate(referer, 1024), truncate("/" + path, 2048)
+                    id, ip, truncate(ua, 512), truncate(referer, 1024), truncate("/" + path, 2048)
             );
         } catch (Exception ignored) {}
 
         return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(target)).build();
     }
 
-    private boolean authorized(HttpHeaders headers) {
+    private boolean authorized(HttpHeaders headers, String formToken) {
         if (apiToken.isBlank()) return false;
         String auth = headers.getFirst(HttpHeaders.AUTHORIZATION);
         if (auth != null && auth.regionMatches(true, 0, "Bearer ", 0, 7)
                 && auth.substring(7).trim().equals(apiToken)) return true;
-        return apiToken.equals(headers.getFirst("X-API-Token"));
+        if (apiToken.equals(headers.getFirst("X-API-Token"))) return true;
+        return apiToken.equals(formToken);
     }
 
     private static String normalizeUrl(String value) {
