@@ -101,10 +101,15 @@ app.MapGet("/{path}", async (string path, HttpRequest req) => {
     await using var reader = await cmd.ExecuteReaderAsync();
     if (!await reader.ReadAsync()) return Results.NotFound();
 
-    var id = reader.GetInt64("id");
-    var target = reader.GetString("target_url");
-    var enabled = reader.GetBoolean("enabled");
-    DateTime? expires = reader.IsDBNull("expires_at") ? null : reader.GetDateTime("expires_at");
+    var idOrd = reader.GetOrdinal("id");
+    var targetOrd = reader.GetOrdinal("target_url");
+    var enabledOrd = reader.GetOrdinal("enabled");
+    var expiresOrd = reader.GetOrdinal("expires_at");
+
+    var id = reader.GetInt64(idOrd);
+    var target = reader.GetString(targetOrd);
+    var enabled = reader.GetBoolean(enabledOrd);
+    DateTime? expires = reader.IsDBNull(expiresOrd) ? null : reader.GetDateTime(expiresOrd);
     await reader.CloseAsync();
 
     if (!enabled || (expires.HasValue && expires.Value < DateTime.Now)) return Results.NotFound();
