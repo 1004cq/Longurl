@@ -57,6 +57,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(home))
+        .route("/healthz", get(healthz))
         .route("/api/create", post(create))
         .route("/{path}", get(resolve))
         .with_state(state);
@@ -69,6 +70,13 @@ async fn main() {
 
 async fn home() -> &'static str {
     "EEEE Long URL — Rust\n"
+}
+
+async fn healthz(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match sqlx::query("SELECT 1").execute(&state.db).await {
+        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"ok": true, "db": true}))).into_response(),
+        Err(_) => (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({"ok": false, "db": false}))).into_response(),
+    }
 }
 
 async fn create(
