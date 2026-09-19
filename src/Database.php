@@ -24,4 +24,10 @@ final class Database
         ]);
         return self::$pdo;
     }
+
+    /** Short insert sessions avoid RR next-key locks on nearby e_length gaps. */
+    public static function useReadCommitted(PDO $pdo): void
+    {
+        $pdo->exec('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');
+    }
 }
