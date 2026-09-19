@@ -14,6 +14,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const hardMaxLength = 3000
+
 type runtimeConfig struct {
 	DBHost            string
 	DBPort            string
@@ -35,6 +37,19 @@ type configStore struct {
 	mu   sync.RWMutex
 	path string
 	cfg  runtimeConfig
+}
+
+func capLength(cfg runtimeConfig) runtimeConfig {
+	if cfg.MinLength < 1 {
+		cfg.MinLength = 1
+	}
+	if cfg.MaxLength > hardMaxLength {
+		cfg.MaxLength = hardMaxLength
+	}
+	if cfg.MaxLength < cfg.MinLength {
+		cfg.MaxLength = cfg.MinLength
+	}
+	return cfg
 }
 
 func loadDotEnv(path string) map[string]string {
@@ -89,7 +104,7 @@ func cfgInt(file map[string]string, key string, fallback int) int {
 
 func loadRuntimeConfig(path string) runtimeConfig {
 	file := loadDotEnv(path)
-	return runtimeConfig{
+	return capLength(runtimeConfig{
 		DBHost:            cfgValue(file, "DB_HOST", "127.0.0.1"),
 		DBPort:            cfgValue(file, "DB_PORT", "3306"),
 		DBName:            cfgValue(file, "DB_NAME", "admin"),
@@ -104,7 +119,7 @@ func loadRuntimeConfig(path string) runtimeConfig {
 		CreatePerMinute:   cfgInt(file, "CREATE_PER_MINUTE", 20),
 		APIPerMinute:      cfgInt(file, "API_PER_MINUTE", 60),
 		Port:              cfgValue(file, "PORT", "8080"),
-	}
+	})
 }
 
 func newConfigStore(path string) *configStore {
@@ -114,18 +129,19 @@ func newConfigStore(path string) *configStore {
 func (s *configStore) get() runtimeConfig {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.cfg
+	return capLength(s.cfg)
 }
 
 func (s *configStore) set(cfg runtimeConfig) {
 	s.mu.Lock()
-	s.cfg = cfg
+	s.cfg = capLength(cfg)
 	s.mu.Unlock()
 }
 
 func (s *configStore) persist(cfg runtimeConfig) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	cfg = capLength(cfg)
 
 	dir := filepath.Dir(s.path)
 	if dir != "." {
