@@ -15,20 +15,20 @@ import (
 )
 
 type runtimeConfig struct {
-	DBHost           string
-	DBPort           string
-	DBName           string
-	DBUser           string
-	DBPass           string
-	BaseURL          string
-	APIToken         string
+	DBHost            string
+	DBPort            string
+	DBName            string
+	DBUser            string
+	DBPass            string
+	BaseURL           string
+	APIToken          string
 	AdminPasswordHash string
-	SessionSecret    string
-	MinLength        int
-	MaxLength        int
-	CreatePerMinute  int
-	APIPerMinute     int
-	Port             string
+	SessionSecret     string
+	MinLength         int
+	MaxLength         int
+	CreatePerMinute   int
+	APIPerMinute      int
+	Port              string
 }
 
 type configStore struct {
@@ -100,7 +100,7 @@ func loadRuntimeConfig(path string) runtimeConfig {
 		AdminPasswordHash: cfgValue(file, "ADMIN_PASSWORD_HASH", ""),
 		SessionSecret:     cfgValue(file, "SESSION_SECRET", ""),
 		MinLength:         cfgInt(file, "MIN_LENGTH", 8),
-		MaxLength:         cfgInt(file, "MAX_LENGTH", 5000),
+		MaxLength:         cfgInt(file, "MAX_LENGTH", 3000),
 		CreatePerMinute:   cfgInt(file, "CREATE_PER_MINUTE", 20),
 		APIPerMinute:      cfgInt(file, "API_PER_MINUTE", 60),
 		Port:              cfgValue(file, "PORT", "8080"),
