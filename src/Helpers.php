@@ -45,10 +45,39 @@ final class Helpers
         exit;
     }
 
+    public static function sendSecurityHeaders(): void
+    {
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: DENY');
+        header('Referrer-Policy: no-referrer');
+        header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+    }
+
     public static function clientIp(): string
     {
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-        return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0';
+        $remote = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $remote = filter_var($remote, FILTER_VALIDATE_IP) ? $remote : '0.0.0.0';
+        $remoteIsPublic = (bool) filter_var(
+            $remote,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
+        if ($remoteIsPublic) {
+            return $remote;
+        }
+
+        foreach (['HTTP_X_REAL_IP', 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR'] as $header) {
+            $raw = (string) ($_SERVER[$header] ?? '');
+            if ($raw === '') {
+                continue;
+            }
+            $first = trim(explode(',', $raw)[0]);
+            if (filter_var($first, FILTER_VALIDATE_IP)) {
+                return $first;
+            }
+        }
+
+        return $remote;
     }
 
     public static function now(): string

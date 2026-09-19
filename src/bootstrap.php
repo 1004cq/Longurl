@@ -33,26 +33,16 @@ function app_config(): array
     return $config;
 }
 
-function app_security_headers(): void
-{
-    if (!headers_sent()) {
-        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-        header('Pragma: no-cache');
-        header('X-Content-Type-Options: nosniff');
-        header('X-Frame-Options: DENY');
-        header('Referrer-Policy: strict-origin-when-cross-origin');
-        header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-        header('Cross-Origin-Opener-Policy: same-origin');
-    }
-}
-
 function app_boot_prod(): void
 {
     ini_set('display_errors', '0');
     ini_set('log_errors', '1');
-    app_security_headers();
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    Helpers::sendSecurityHeaders();
 }
-
 Auth::start();
 I18n::init();
-app_security_headers();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+Helpers::sendSecurityHeaders();

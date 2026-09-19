@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EEEE — Long URL Generator</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/slider.css">
+</head>
+<body data-base="" data-generate="生成长链接" data-generating="生成中…" data-copy="复制" data-copied="已复制">
+  <main class="wrap">
+    <header class="topline"><a class="brand" href="/">EEEE</a></header>
+    <section class="hero home-hero">
+      <h1>EEEE</h1>
+      <p>你的链接还不够长。</p>
+    </section>
+    <section class="card generator-card">
+      <form id="gen-form" novalidate>
+        <input id="url" name="url" type="text" placeholder="example.com/test" required>
+        <div class="field-note"><span id="url-state"></span><span id="url-count">0</span></div>
+        <strong id="len-label">100 <small>e</small></strong>
+        <input id="length-range" type="range" min="8" max="5000" value="100">
+        <div class="len-ticks">
+          <button type="button" class="len-tick" data-len="50">50</button>
+          <button type="button" class="len-tick active" data-len="100">100</button>
+          <button type="button" class="len-tick" data-len="200">200</button>
+          <button type="button" class="len-tick" data-len="500">500</button>
+          <button type="button" class="len-tick" data-len="1000">1000</button>
+          <button type="button" class="len-tick" data-len="2000">2000</button>
+        </div>
+        <input id="length" name="length" type="number" min="8" max="5000" value="100">
+        <div class="preview-line"><span id="preview"></span></div>
+        <button class="btn generate-btn" id="submit" type="submit"><span class="btn-icon">↗</span><span class="btn-label">生成长链接</span></button>
+        <div class="err" id="err"></div>
+      </form>
+      <div class="result" id="result">
+        <div class="longurl" id="out-url"></div>
+        <div class="meta"><span id="out-len"></span><span id="out-target"></span></div>
+        <button class="btn" type="button" id="copy">复制</button>
+        <a class="btn ghost" id="open" target="_blank" rel="noopener">打开</a>
+      </div>
+    </section>
+  </main>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

@@ -21,6 +21,8 @@ final class LinkService
             throw new InvalidArgumentException("Length must be between {$min} and {$max}.");
         }
 
+        Database::useReadCommitted($this->pdo);
+
         $radii = [0, 4, 12, 32, 64, 128, 256];
         $tried = [];
 
@@ -35,6 +37,11 @@ final class LinkService
                 try {
                     return $this->insertLink($url, $length);
                 } catch (PDOException $e) {
+                    if ($this->isLockRetry($e)) {
+                        unset($tried[$length]);
+                        usleep(random_int(2000, 8000));
+                        continue;
+                    }
                     if (!$this->isDuplicateKey($e)) {
                         throw $e;
                     }
@@ -52,6 +59,10 @@ final class LinkService
             try {
                 return $this->insertLink($url, $length);
             } catch (PDOException $e) {
+                if ($this->isLockRetry($e)) {
+                    usleep(random_int(2000, 8000));
+                    continue;
+                }
                 if (!$this->isDuplicateKey($e)) {
                     throw $e;
                 }
@@ -145,6 +156,15 @@ final class LinkService
         return $sqlState === '23000' && $driverCode === 1062;
     }
 
+    private function isLockRetry(PDOException $e): bool
+    {
+        $info = $e->errorInfo;
+        $sqlState = (string) ($info[0] ?? '');
+        $driverCode = (int) ($info[1] ?? 0);
+
+        return $sqlState === '40001' || $driverCode === 1213 || $driverCode === 1205;
+    }
+
     public function nextFreeLength(int $start, int $max): int
     {
         $stmt = $this->pdo->prepare(
@@ -185,7 +205,7 @@ final class LinkService
 
     public function findByLength(int $length): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM links WHERE e_length = :len LIMIT 1');
+        $stmt = $this->pdo->prepare('SELECT id, e_length, target_url, clicks, enabled, created_at, updated_at, expires_at FROM links WHERE e_length = :len LIMIT 1');
         $stmt->execute([':len' => $length]);
         $row = $stmt->fetch();
 
@@ -194,17 +214,15 @@ final class LinkService
 
     public function recordClick(array $link): void
     {
-        $this->pdo->beginTransaction();
+        $upd = $this->pdo->prepare(
+            'UPDATE links SET clicks = clicks + 1, updated_at = :now WHERE id = :id'
+        );
+        $upd->execute([
+            ':now' => Helpers::now(),
+            ':id' => $link['id'],
+        ]);
 
         try {
-            $upd = $this->pdo->prepare(
-                'UPDATE links SET clicks = clicks + 1, updated_at = :now WHERE id = :id'
-            );
-            $upd->execute([
-                ':now' => Helpers::now(),
-                ':id' => $link['id'],
-            ]);
-
             $ins = $this->pdo->prepare(
                 'INSERT INTO click_logs (link_id, clicked_at, ip, user_agent, referer, request_uri)
                  VALUES (:lid, :at, :ip, :ua, :ref, :uri)'
@@ -217,13 +235,8 @@ final class LinkService
                 ':ref' => substr((string) ($_SERVER['HTTP_REFERER'] ?? ''), 0, 1024),
                 ':uri' => substr((string) ($_SERVER['REQUEST_URI'] ?? ''), 0, 2048),
             ]);
-
-            $this->pdo->commit();
-        } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
-            }
-            throw $e;
+        } catch (Throwable) {
+            // Redirect must not depend on analytics.
         }
     }
 

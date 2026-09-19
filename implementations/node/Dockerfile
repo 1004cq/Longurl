@@ -1,8 +1,16 @@
-FROM node:22-slim
+FROM node:22-alpine AS build
 WORKDIR /app
-COPY server.js ./server.js
-RUN mkdir -p /app/data && chown -R node:node /app
+COPY package*.json tsconfig.json ./
+RUN npm install
+COPY src ./src
+RUN npm run build
+
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm install --omit=dev
+COPY --from=build /app/dist ./dist
 USER node
-ENV PORT=8080
 EXPOSE 8080
-CMD ["node", "server.js"]
+CMD ["node", "dist/index.js"]

@@ -1,25 +1,57 @@
-# Deployment guide
+# Alternate implementations deployment
 
-Choose exactly one backend implementation per deployment. Do not point two implementations at the same production database until their migrations and concurrency behavior have been verified.
+Keep the root PHP app for BaoTa if you want the full UI and admin.
+Use another runtime only when you want the redirect/API core in that language.
 
-## Python reference
+## Shared database
 
-```bash
-cd implementations/python
-python3 server.py
-```
+All implementations use `/sql/schema.sql`.
+PHP admin can manage the same rows the other runtimes create.
 
-For a service manager, run it as a dedicated unprivileged user and put Nginx in front using `nginx-reverse-proxy.conf`. Set `APP_BASE_URL`, `API_TOKEN`, `DATABASE_URL`, `MIN_LENGTH`, and `MAX_LENGTH` through the environment rather than committing secrets.
-
-## Node.js reference
+## Environment
 
 ```bash
-cd implementations/node
-API_TOKEN='replace-me' node server.js
+cp implementations/.env.example implementations/.env
 ```
 
-The Node adapter currently uses a single-process JSON store. Use it for local/dev deployments only until a transactional database adapter is added.
+Edit secrets locally. Never commit `.env` or a real hostname.
 
-## Existing PHP application
+## Docker
 
-The original PHP app remains the production reference and can continue to use the root-level Nginx configuration. The alternate implementations are additive and do not replace it.
+```bash
+cd implementations
+docker compose -f docker-compose.example.yml up -d --build go
+```
+
+| Runtime | Host port |
+|---|---:|
+| Go | 8081 |
+| Python | 8082 |
+| Node | 8083 |
+| Rust | 8084 |
+| Java | 8085 |
+| C# | 8086 |
+
+## Nginx
+
+Proxy to one backend only. Forward the real client IP:
+
+```nginx
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+large_client_header_buffers 8 32k;
+client_header_buffer_size 16k;
+```
+
+## Smoke test
+
+```bash
+curl -s http://127.0.0.1:8081/healthz
+curl -s -X POST http://127.0.0.1:8081/api/create \
+  -H 'Authorization: Bearer CHANGE_ME' \
+  -d 'url=https://example.com' \
+  -d 'length=100'
+```
+
+`length` in the JSON is the stored e-count and may differ slightly from 100 when that slot is taken.

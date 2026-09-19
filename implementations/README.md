@@ -1,14 +1,11 @@
-# EEEE Long URL — alternate backend implementations
+# Alternate language implementations
 
-This directory contains independent backend implementations that follow the shared contract in [`CONTRACT.md`](CONTRACT.md). The original PHP application remains the reference implementation and is not replaced automatically.
+PHP in the repo root is the complete product.
 
-| Implementation | Status | Default run mode |
-|---|---|---|
-| Python | Reference implementation | Python standard library + SQLite |
-| Node.js | Planned adapter | See directory README |
-| Go | Planned adapter | See directory README |
-| Rust | Planned adapter | See directory README |
-| Java | Planned adapter | See directory README |
-| C# | Planned adapter | See directory README |
+Recommended production split:
+- PHP: `/`, `/admin`, `/install`, `POST /?action=create`, `POST /api/create`
+- Go on `127.0.0.1:8081`: `GET /e+` only
 
-Each implementation must be evaluated independently before production use. Do not share a database between implementations without first testing migrations, click counters, expiration semantics, and concurrent allocation.
+See `go/README.md` and `../nginx/rewrite.conf`.
+
+Other languages in this folder are optional protocol samples. Do not proxy the whole hostname to them.
