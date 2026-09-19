@@ -1,11 +1,15 @@
 # Alternate language implementations
 
-PHP in the repo root is the complete product.
+The repository root Go application is the canonical EEEE production server.
 
-Recommended production split:
-- PHP: `/`, `/admin`, `/install`, `POST /?action=create`, `POST /api/create`
-- Go on `127.0.0.1:8081`: `GET /e+` only
+This directory contains optional protocol-compatible implementations in:
+- Go (legacy standalone sample)
+- Python
+- Node/TypeScript
+- Rust
+- Java
+- C#
 
-See `go/README.md` and `../nginx/rewrite.conf`.
+They share `/sql/schema.sql` and the same core e-length redirect contract.
 
-Other languages in this folder are optional protocol samples. Do not proxy the whole hostname to them.
+Do not deploy several runtimes on the same hostname unless you intentionally split routes.
