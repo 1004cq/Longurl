@@ -24,8 +24,8 @@
         if (!url.value.trim()) { error.value = 'Please enter a URL.'; return; }
         loading.value = true;
         try {
-          const fd = new FormData(); fd.set('_csrf', body.dataset.csrf || ''); fd.set('url', normalize(url.value)); fd.set('length', String(length.value));
-          const response = await fetch('/?action=create', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
+          const fd = new FormData(); fd.set('url', normalize(url.value)); fd.set('length', String(length.value));
+          const response = await fetch('/api/create', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
           const data = await response.json(); if (!data.success) throw new Error(data.error || 'Failed');
           result.value = data; window.EEEEScene?.success(data.length); await nextTick(); document.querySelector('.result')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (e) { error.value = e instanceof Error ? e.message : 'Failed'; }
