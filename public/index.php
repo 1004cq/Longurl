@@ -38,7 +38,7 @@ if ($path === '/api/create' || $path === '/api/create/') {
     }
     try {
         $url = (string) ($_POST['url'] ?? '');
-        $length = (int) ($_POST['length'] ?? 50);
+        $length = (int) ($_POST['length'] ?? 100);
         $created = $links->create($url, $length);
         Helpers::json(['success' => true, 'url' => $created['url'], 'length' => $created['length'], 'target' => $created['target']]);
     } catch (Throwable $e) {
@@ -59,7 +59,7 @@ if (($_GET['action'] ?? '') === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST
         Helpers::json(['success' => false, 'error' => 'Too many requests'], 429);
     }
     try {
-        $created = $links->create((string) ($_POST['url'] ?? ''), (int) ($_POST['length'] ?? 50));
+        $created = $links->create((string) ($_POST['url'] ?? ''), (int) ($_POST['length'] ?? 100));
         Helpers::json(['success' => true, 'url' => $created['url'], 'length' => $created['length'], 'target' => $created['target']]);
     } catch (Throwable $e) {
         Helpers::json(['success' => false, 'error' => $e->getMessage()], 400);
