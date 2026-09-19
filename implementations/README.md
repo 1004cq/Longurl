@@ -1,15 +1,20 @@
 # Alternate language implementations
 
-PHP in the repository root is the complete product.
-This folder is optional API + redirect cores that share `/sql/schema.sql`.
+PHP in the repo root is the **only complete product**: installer, bilingual UI, admin, analytics, CSRF, rate limits.
 
-Parity now:
-- nearby random `e_length` (not only +1) in Go, Python, Node, Rust, Java, C#
-- unique-key retry on duplicate
+`implementations/*` are compatible **API + redirect** services. They can share the same MySQL tables.
+`implementations/web/index.html` is a slim home page. To use it, serve `/assets` from the PHP `public/assets` directory and accept `POST /?action=create` the same way PHP does.
+
+What is aligned across Go / Python / Node / Rust / Java / C#:
+- nearby random `e_length`
+- unique-index retry
 - 302 + click log
-- token via Bearer / X-API-Token / form `token`
+- token API
 - public http(s) only
-- X-Forwarded-For when behind a proxy
 
-Still missing versus PHP: home UI, admin, installer, CSRF, rate limits.
-Do not proxy the live site here unless you intend to drop the PHP document root.
+What is **not** cloned six times on purpose:
+- BaoTa web installer
+- full admin V2
+- i18n + polished CSS animations
+
+If you need a second production stack, pick **one** language (Go) and keep PHP as the admin UI on the same database. Do not run two public generators on one hostname.
