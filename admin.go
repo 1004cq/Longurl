@@ -344,7 +344,7 @@ func (a *app) adminSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	minLen, _ := strconv.Atoi(r.FormValue("min_length"))
 	maxLen, _ := strconv.Atoi(r.FormValue("max_length"))
-	if minLen < 1 || maxLen < minLen || maxLen > 20000 {
+	if minLen < 1 || maxLen < minLen || maxLen > hardMaxLength {
 		http.Error(w, "invalid length range", http.StatusBadRequest)
 		return
 	}

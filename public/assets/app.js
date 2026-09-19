@@ -5,7 +5,7 @@
   if (!root || !window.Vue) return;
   const copy = window.EEEE_COPY || {};
   const isLost = body.dataset.page === 'lost';
-  const min = Number(body.dataset.minLength || 8), max = Number(body.dataset.maxLength || 5000);
+  const min = Number(body.dataset.minLength || 8), max = Number(body.dataset.maxLength || 2200);
   const base = body.dataset.base || window.location.origin;
   const lang = document.documentElement.lang || 'en';
   const clamp = (n) => Math.min(max, Math.max(min, Number(n) || min));
@@ -30,7 +30,7 @@
   const buildEQr = (text) => {
     if (typeof qrcode !== 'function') return { ok: false };
     const payload = String(text || '');
-    if (!payload || payload.length > 2200) return { ok: false };
+    if (!payload || payload.length > 2400) return { ok: false };
     try {
       const qr = qrcode(0, 'L');
       qr.addData(payload);
