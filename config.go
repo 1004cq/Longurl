@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const hardMaxLength = 3000
+const hardMaxLength = 2200
 
 type runtimeConfig struct {
 	DBHost            string
@@ -115,7 +115,7 @@ func loadRuntimeConfig(path string) runtimeConfig {
 		AdminPasswordHash: cfgValue(file, "ADMIN_PASSWORD_HASH", ""),
 		SessionSecret:     cfgValue(file, "SESSION_SECRET", ""),
 		MinLength:         cfgInt(file, "MIN_LENGTH", 8),
-		MaxLength:         cfgInt(file, "MAX_LENGTH", 3000),
+		MaxLength:         cfgInt(file, "MAX_LENGTH", 2200),
 		CreatePerMinute:   cfgInt(file, "CREATE_PER_MINUTE", 20),
 		APIPerMinute:      cfgInt(file, "API_PER_MINUTE", 60),
 		Port:              cfgValue(file, "PORT", "8080"),
