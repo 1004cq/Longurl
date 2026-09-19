@@ -100,3 +100,32 @@ For the current EEEE site:
 - Java/C#: suitable when running in those ecosystems already
 
 Do not replace the working PHP deployment just because the alternate implementations exist. They are optional compatible backends.
+
+
+## Health check
+
+Every alternate implementation exposes:
+
+```
+GET /healthz
+```
+
+Healthy response:
+
+```json
+{"ok":true,"db":true}
+```
+
+If MySQL cannot be reached, the endpoint returns HTTP 503 with:
+
+```json
+{"ok":false,"db":false}
+```
+
+Example:
+
+```bash
+curl -i http://127.0.0.1:8081/healthz
+```
+
+This is suitable for Docker/Nginx/load-balancer health checks.
