@@ -1,12 +1,12 @@
 # Alternate implementations deployment
 
-Keep the root PHP app for BaoTa if you want the full UI and admin.
-Use another runtime only when you want the redirect/API core in that language.
+The repository root Go application is the canonical production server.
+
+The runtimes in this directory are optional protocol-compatible alternatives for testing or ecosystem-specific deployments.
 
 ## Shared database
 
 All implementations use `/sql/schema.sql`.
-PHP admin can manage the same rows the other runtimes create.
 
 ## Environment
 
@@ -44,6 +44,8 @@ large_client_header_buffers 8 32k;
 client_header_buffer_size 16k;
 ```
 
+For the production root Go application, use `/nginx/rewrite.conf`.
+
 ## Smoke test
 
 ```bash
@@ -53,5 +55,3 @@ curl -s -X POST http://127.0.0.1:8081/api/create \
   -d 'url=https://example.com' \
   -d 'length=100'
 ```
-
-`length` in the JSON is the stored e-count and may differ slightly from 100 when that slot is taken.

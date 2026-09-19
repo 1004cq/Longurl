@@ -1,27 +1,14 @@
-# Go redirect sidecar
+# Legacy standalone Go example
 
-PHP remains the website. This process only answers `GET /e+` (and `/healthz`, `/api/create`).
+The repository root now contains the canonical Go production application.
 
-## Run
+This directory is retained only as a smaller protocol-compatible example for the multilang matrix.
 
-Same MySQL as PHP. Placeholders only:
+For new deployments use:
 
 ```bash
-cd implementations/go
-go build -o longurl-go .
-
-export DB_HOST=127.0.0.1
-export DB_PORT=3306
-export DB_NAME=eeee_longurl
-export DB_USER=eeee_user
-export DB_PASS=CHANGE_ME
-export BASE_URL=https://your-domain.example
-export PORT=8081
-./longurl-go
+cd ../..
+go build -o longurl .
 ```
 
-Check: `curl -s http://127.0.0.1:8081/healthz`
-
-Then paste `nginx/rewrite.conf` into BaoTa 伪静态 and reload Nginx.
-
-Do not send `/` or `/admin` to Go. Generation stays in PHP so CSRF and the slider keep working.
+Then proxy the complete site to the root Go service as documented in `/README.md`.

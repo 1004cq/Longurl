@@ -1,0 +1,30 @@
+name: Go main
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "public/**"
+      - "sql/**"
+      - "Dockerfile"
+      - ".github/workflows/go-main.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - run: go mod tidy
+      - run: gofmt -w main.go
+      - run: go vet ./...
+      - run: go test ./...
+      - run: go build ./...
