@@ -1,0 +1,6 @@
+.e-qr-wrap{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.e-qr-wrap .card-kicker{margin-bottom:10px}
+.e-qr{margin:0 auto;width:max-content;max-width:100%;overflow:auto;padding:12px;border-radius:16px;background:#050506;color:var(--acid);font:700 7px/7px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0;white-space:pre;user-select:all}
+.e-qr.huge{font-size:5px;line-height:5px}
+.e-qr-note{margin:10px 0 0;color:#676a72;font-size:11px}
+@media (max-width:520px){.e-qr{font-size:5px;line-height:5px}}

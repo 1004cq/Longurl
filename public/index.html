@@ -9,6 +9,7 @@
   <meta property="og:type" content="website">
   <link rel="stylesheet" href="/assets/app.css">
   <link rel="stylesheet" href="/assets/slider.css">
+  <link rel="stylesheet" href="/assets/qr.css">
 </head>
 <body class="eeee-app" data-base="__BASE_URL__" data-page="__PAGE__" data-min-length="__MIN_LENGTH__" data-max-length="__MAX_LENGTH__">
   <canvas id="eeee-scene" aria-hidden="true"></canvas>
@@ -32,7 +33,9 @@
         copy:'Copy', copied:'Copied', open:'Open', lostTitle:'Signal lost',
         lostText:'This e-path does not exist.', lostSignal:'Nothing here',
         lostHint:'The requested run of e characters is missing, disabled or expired.',
-        backHome:'Back home', description:'A long-URL generator made of e.'
+        backHome:'Back home', description:'A long-URL generator made of e.',
+        qrTitle:'QR made of e', qrHint:'Dark modules are the letter e. Scan the full https link.',
+        qrTooLong:'This e-path is too long for a scannable QR code.'
       },
       zh: {
         language:'语言', online:'在线', eyebrow:'超长链接生成器',
@@ -43,7 +46,9 @@
         copy:'复制', copied:'已复制', open:'打开', lostTitle:'信号丢失',
         lostText:'这条 e 链接不存在。', lostSignal:'这里没有内容',
         lostHint:'请求的 e 长度不存在、已停用或已过期。',
-        backHome:'返回首页', description:'一款只用 e 组成路径的超长链接生成器。'
+        backHome:'返回首页', description:'一款只用 e 组成路径的超长链接生成器。',
+        qrTitle:'e 字二维码', qrHint:'黑色块都是字母 e。手机扫的是完整 https 链接。',
+        qrTooLong:'这条 e 太长，无法放进可扫描的二维码。'
       }
     };
     window.EEEE_COPY = copy[lang];
@@ -51,6 +56,7 @@
   </script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script src="/assets/scene.js"></script>
   <script src="/assets/app.js"></script>
 </body>
