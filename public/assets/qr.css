@@ -4,7 +4,9 @@
   --qr-size:45;
   display:grid;
   grid-template-columns:repeat(var(--qr-size),1fr);
-  width:min(320px,100%);
+  grid-template-rows:repeat(var(--qr-size),1fr);
+  width:min(320px,76vw);
+  height:min(320px,76vw);
   aspect-ratio:1/1;
   margin:0 auto;
   padding:10px;
@@ -35,6 +37,6 @@
 .e-qr.huge .e-qr-cell.dark i{display:none}
 .e-qr-note{margin:10px 0 0;color:#676a72;font-size:11px;line-height:1.55}
 @media (max-width:520px){
-  .e-qr{width:min(76vw,300px);padding:8px;border-radius:16px}
+  .e-qr{width:min(78vw,300px);height:min(78vw,300px);padding:8px;border-radius:16px}
   .e-qr-cell.dark i{font-size:2px}
 }
