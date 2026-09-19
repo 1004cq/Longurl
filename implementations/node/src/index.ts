@@ -100,7 +100,7 @@ app.get(/^\/(e+)$/, async (req, res) => {
     await conn.beginTransaction();
     await conn.execute("UPDATE links SET clicks=clicks+1,updated_at=NOW() WHERE id=?", [row.id]);
     await conn.execute(
-      "INSERT INTO click_logs (link_id,clicked_at,ip,user_agent,referer,request_uri) VALUES (?,NOW(),?,?,?,?,?)".replace(",?,?,?,?,?)", ",?,?,?,?)"),
+      "INSERT INTO click_logs (link_id,clicked_at,ip,user_agent,referer,request_uri) VALUES (?,NOW(),?,?,?,?)",
       [row.id, req.ip || "", (req.get("user-agent") || "").slice(0, 512), (req.get("referer") || "").slice(0, 1024), req.originalUrl.slice(0, 2048)]
     );
     await conn.commit();
