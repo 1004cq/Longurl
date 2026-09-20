@@ -476,7 +476,7 @@ html.js-ready body:not(.is-ready) .footer { opacity:0; transform:translateY(18px
 .url-field.is-valid { border-color:rgba(213,255,85,.58); box-shadow:0 0 0 4px rgba(213,255,85,.07); }
 .url-field.is-valid .field-icon { animation:icon-pop .35s ease-out; }
 @keyframes icon-pop { 50% { transform:translateY(-3px) rotate(-8deg) scale(1.18); } }
-#length-range { background:linear-gradient(90deg,var(--acid) var(--range-progress,0%),rgba(255,255,255,.13) var(--range-progress,0%)); transition:background .18s ease; }
+#length-range { background:linear-gradient(90deg,var(--acid) var(--range-progress,0%),rgba(255,255,255,.13) var(--range-progress,0%)); transition:none; }
 #len-label { display:inline-block; transform-origin:right center; }
 #len-label.bump { animation:number-bump .28s cubic-bezier(.2,1.5,.4,1); }
 @keyframes number-bump { 50% { color:#fff; transform:scale(1.18); text-shadow:0 0 20px rgba(213,255,85,.7); } }

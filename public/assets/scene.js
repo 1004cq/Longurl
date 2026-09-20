@@ -70,7 +70,18 @@
       group.add(sprite); dots.push(sprite);
     }
   }
-  function setLength(count) { seed += .08; mode = 'home'; rebuild(Number(count) || 100); }
+  function setLength(count) {
+    const n = Number(count) || 100;
+    const nextCount = Math.min(150, Math.max(12, Math.round(n / 18)));
+    const nextSize = .45 + (n / 5000) * .8;
+    if (mode === 'home' && nextCount === targetCount && dots.length === nextCount) {
+      dots.forEach((sprite) => sprite.scale.set(nextSize, nextSize, 1));
+      return;
+    }
+    seed += .08;
+    mode = 'home';
+    rebuild(n);
+  }
   function lost() { mode = 'lost'; dots.forEach((s) => { s.userData.velocity = new THREE.Vector3(rand(1.8), 1 + Math.random() * 2.8, rand(1.4)); }); }
   function success(count) {
     mode = 'success'; clear(flying);
