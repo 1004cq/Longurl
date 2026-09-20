@@ -1,4 +1,15 @@
-.len-wrap { margin: 4px 0 8px; }
+.len-wrap { margin: 4px 0 8px; --range-progress: 0%; }
+.len-slider {
+  position: relative;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.len-wrap.is-dragging .len-ticks,
+.len-wrap.is-dragging .number-field {
+  pointer-events: none;
+}
 .len-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .len-top strong { font-size: 14px; letter-spacing: -.02em; }
 #length-range {
@@ -12,6 +23,7 @@
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   transition: none;
+  pointer-events: none;
 }
 .len-wrap.is-dragging #length-range {
   transition: none;
@@ -64,7 +76,7 @@
   display: flex;
   justify-content: space-between;
   gap: 4px;
-  margin: 8px 0 10px;
+  margin: 12px 0 10px;
 }
 .len-tick {
   appearance: none;
