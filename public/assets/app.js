@@ -80,26 +80,45 @@
       const displayUrl = computed(() => result.value ? bare(result.value.url) : '');
       const qr = computed(() => result.value ? buildEQr(result.value.url) : { ok: false });
       const ratio = computed(() => `${((length.value - min) / Math.max(1, max - min)) * 100}%`);
-      let sceneTimer = 0;
-      const applyScene = (value) => { window.EEEEScene?.setLength(value); };
-      const cancelScene = () => { if (sceneTimer) { clearTimeout(sceneTimer); sceneTimer = 0; } };
-      const scheduleScene = (value) => {
-        cancelScene();
-        sceneTimer = setTimeout(() => { sceneTimer = 0; applyScene(value); }, 140);
+      const lengthTicks = [50, 100, 200, 500, 1000, 2000].filter((n) => n >= min && n <= max);
+      const rangeEl = ref(null);
+      let lightFrame = 0;
+      let pendingLength = null;
+      let lastSceneValue;
+      const applyScene = (value) => {
+        if (lastSceneValue === value) return;
+        lastSceneValue = value;
+        window.EEEEScene?.setLength(value);
+      };
+      const cancelLight = () => {
+        if (lightFrame) cancelAnimationFrame(lightFrame);
+        lightFrame = 0;
+        pendingLength = null;
+      };
+      const syncRange = (value) => {
+        const el = rangeEl.value;
+        if (el && el.value !== String(value)) el.value = String(value);
       };
       const setLength = (value) => {
+        cancelLight();
         length.value = clamp(value);
-        cancelScene();
+        syncRange(length.value);
         applyScene(length.value);
       };
       const onRangeInput = (event) => {
         rangeDragging.value = true;
-        length.value = clamp(event.target.value);
-        scheduleScene(length.value);
+        pendingLength = clamp(event.target.value);
+        if (lightFrame) return;
+        lightFrame = requestAnimationFrame(() => {
+          lightFrame = 0;
+          if (pendingLength == null) return;
+          length.value = pendingLength;
+          pendingLength = null;
+        });
       };
       const onRangeCommit = (event) => {
         rangeDragging.value = false;
-        setLength(event?.target?.value ?? length.value);
+        setLength(event?.target?.value ?? pendingLength ?? length.value);
       };
       const cleanField = () => {
         const clean = extractUrl(url.value);
@@ -154,7 +173,7 @@
         } catch {}
       };
       onMounted(() => { setLength(100); if (isLost) window.EEEEScene?.lost(); document.documentElement.classList.add('js-ready'); requestAnimationFrame(() => body.classList.add('is-ready')); });
-      return { copy, lang, langUrl, isLost, min, max, url, length, rangeDragging, loading, error, result, copied, preview, displayUrl, qr, ratio, normalize, setLength, onRangeInput, onRangeCommit, updateUrl, submit, paste, onPaste, copyResult };
+      return { copy, lang, langUrl, isLost, min, max, url, length, lengthTicks, rangeDragging, rangeEl, loading, error, result, copied, preview, displayUrl, qr, ratio, normalize, setLength, onRangeInput, onRangeCommit, updateUrl, submit, paste, onPaste, copyResult };
     },
     template: `
       <div class="ambient ambient-a" aria-hidden="true"></div><div class="ambient ambient-b" aria-hidden="true"></div>
@@ -162,7 +181,7 @@
       <main class="wrap">
         <header class="topline"><a class="brand" href="/" aria-label="EEEE home"><i></i><span>EEEE</span></a><div class="header-right"><span class="status-dot"><b></b> {{ copy.online }}</span><div class="lang-switch" :aria-label="copy.language"><a :class="{active:lang==='en'}" :href="langUrl('en')">EN</a><a :class="{active:lang==='zh'}" :href="langUrl('zh')">中文</a></div></div></header>
         <template v-if="isLost"><section class="hero lost-hero"><div class="eyebrow"><span>404</span> / {{ copy.lostTitle }}</div><h1><span class="ghost-e">e</span>404</h1><p>{{ copy.lostText }}</p></section><section class="lost-card card"><div class="lost-orbit"><span>e</span><span>e</span><span>e</span></div><div><div class="card-kicker">{{ copy.lostSignal }}</div><p class="muted">{{ copy.lostHint }}</p><a class="btn" href="/"><span>↗</span> {{ copy.backHome }}</a></div></section></template>
-        <template v-else><section class="hero home-hero"><div class="eyebrow"><span class="pulse"></span> {{ copy.eyebrow }}</div><h1>{{ copy.heroTitle }}<br><em>{{ copy.heroAccent }}</em></h1><p>{{ copy.tagline }}</p></section><section class="card generator-card"><div class="card-head"><div><div class="card-kicker">01 / {{ copy.originalUrl }}</div><h2>{{ copy.inputTitle }}</h2></div><span class="shortcut">⌘ ↵</span></div><form @submit.prevent="submit"><div class="url-field" :class="{'has-value':url,'is-valid':/^https?:\\/\\/[^\\s]+$/i.test(normalize(url))}"><span class="field-icon">↗</span><input v-model="url" @input="updateUrl" @paste="onPaste" @keydown.meta.enter="submit" @keydown.ctrl.enter="submit" type="text" placeholder="example.com/your-destination" autocomplete="off" spellcheck="false"><button class="paste-btn" type="button" @click="paste">⌘V</button></div><div class="field-note"><span>{{ url ? copy.validUrl : 'https:// will be added automatically' }}</span><span>{{ url.length }}</span></div><div class="length-head"><div><div class="card-kicker">02 / {{ copy.length }}</div><h2>{{ copy.lengthTitle }}</h2></div><strong id="len-label">{{ length }} <small>e</small></strong></div><div class="len-wrap" :class="{'is-dragging':rangeDragging}"><input id="length-range" type="range" :min="min" :max="max" step="1" :value="length" @input="onRangeInput" @change="onRangeCommit" @pointerup="onRangeCommit" @touchend.passive="onRangeCommit" :style="{'--range-progress':ratio}" :aria-valuemin="min" :aria-valuemax="max" :aria-valuenow="length" :aria-valuetext="length + ' e'"><div class="len-ticks"><button v-for="n in [50,100,200,500,1000,2000]" v-if="n>=min&&n<=max" type="button" class="len-tick" :class="{active:n===length}" @click="setLength(n)">{{ n }}</button></div><div class="number-field"><input type="number" :min="min" :max="max" v-model.number="length" @input="setLength(length)"><span>e</span></div></div><div class="preview-line"><span class="preview-mark">◎</span><span>{{ preview }}</span></div><button class="btn generate-btn" :class="{'is-loading':loading}" :disabled="loading"><span class="btn-icon">{{ loading ? '◌' : '↗' }}</span><span class="btn-label">{{ loading ? copy.generating : copy.generate }}</span><kbd>⌘↵</kbd></button><div class="err" role="alert">{{ error }}</div></form><div v-if="result" class="result show"><div class="result-head"><div class="card-kicker">{{ copy.longUrl }}</div><span class="success-chip">✓ ready</span></div><div class="longurl">{{ displayUrl }}</div><div class="meta"><span>{{ result.length }} e</span><span class="meta-sep">•</span><span>{{ result.target }}</span></div><div class="e-qr-wrap"><div class="card-kicker">{{ copy.qrTitle }}</div><div v-if="qr.ok" class="e-qr" :class="{huge: qr.size > 90}" :style="{'--qr-size': qr.gridSize}" role="img" :aria-label="copy.qrTitle"><template v-for="(row, y) in qr.modules" :key="y"><span v-for="(dark, x) in row" :key="x" class="e-qr-cell" :class="{dark}"><i v-if="dark">e</i></span></template></div><p class="e-qr-note">{{ qr.ok ? copy.qrHint : copy.qrTooLong }}</p></div><div class="actions"><button class="btn" :class="{copied}" type="button" @click="copyResult"><span>{{ copied ? '✓' : '⬠' }}</span> {{ copied ? copy.copied : copy.copy }}</button><a class="btn ghost" :href="result.url" target="_blank" rel="noopener"><span>↗</span> {{ copy.open }}</a></div></div></section><div class="footer"><span>EEEE</span> · {{ copy.description }}<span class="footer-e">e e e</span></div></template>
+        <template v-else><section class="hero home-hero"><div class="eyebrow"><span class="pulse"></span> {{ copy.eyebrow }}</div><h1>{{ copy.heroTitle }}<br><em>{{ copy.heroAccent }}</em></h1><p>{{ copy.tagline }}</p></section><section class="card generator-card"><div class="card-head"><div><div class="card-kicker">01 / {{ copy.originalUrl }}</div><h2>{{ copy.inputTitle }}</h2></div><span class="shortcut">⌘ ↵</span></div><form @submit.prevent="submit"><div class="url-field" :class="{'has-value':url,'is-valid':/^https?:\\/\\/[^\\s]+$/i.test(normalize(url))}"><span class="field-icon">↗</span><input v-model="url" @input="updateUrl" @paste="onPaste" @keydown.meta.enter="submit" @keydown.ctrl.enter="submit" type="text" placeholder="example.com/your-destination" autocomplete="off" spellcheck="false"><button class="paste-btn" type="button" @click="paste">⌘V</button></div><div class="field-note"><span>{{ url ? copy.validUrl : 'https:// will be added automatically' }}</span><span>{{ url.length }}</span></div><div class="length-head"><div><div class="card-kicker">02 / {{ copy.length }}</div><h2>{{ copy.lengthTitle }}</h2></div><strong id="len-label">{{ length }} <small>e</small></strong></div><div class="len-wrap" :class="{'is-dragging':rangeDragging}"><input id="length-range" ref="rangeEl" type="range" :min="min" :max="max" step="1" value="100" @input="onRangeInput" @change="onRangeCommit" @pointerup="onRangeCommit" @touchend.passive="onRangeCommit" :style="{'--range-progress':ratio}" :aria-valuemin="min" :aria-valuemax="max" :aria-valuenow="length" :aria-valuetext="length + ' e'"><div class="len-ticks"><button v-for="n in lengthTicks" :key="n" type="button" class="len-tick" :class="{active:n===length}" @click="setLength(n)">{{ n }}</button></div><div class="number-field"><input type="number" :min="min" :max="max" v-model.number="length" @input="setLength(length)"><span>e</span></div></div><div class="preview-line"><span class="preview-mark">◎</span><span>{{ preview }}</span></div><button class="btn generate-btn" :class="{'is-loading':loading}" :disabled="loading"><span class="btn-icon">{{ loading ? '◌' : '↗' }}</span><span class="btn-label">{{ loading ? copy.generating : copy.generate }}</span><kbd>⌘↵</kbd></button><div class="err" role="alert">{{ error }}</div></form><div v-if="result" class="result show"><div class="result-head"><div class="card-kicker">{{ copy.longUrl }}</div><span class="success-chip">✓ ready</span></div><div class="longurl">{{ displayUrl }}</div><div class="meta"><span>{{ result.length }} e</span><span class="meta-sep">•</span><span>{{ result.target }}</span></div><div class="e-qr-wrap"><div class="card-kicker">{{ copy.qrTitle }}</div><div v-if="qr.ok" class="e-qr" :class="{huge: qr.size > 90}" :style="{'--qr-size': qr.gridSize}" role="img" :aria-label="copy.qrTitle"><template v-for="(row, y) in qr.modules" :key="y"><span v-for="(dark, x) in row" :key="x" class="e-qr-cell" :class="{dark}"><i v-if="dark">e</i></span></template></div><p class="e-qr-note">{{ qr.ok ? copy.qrHint : copy.qrTooLong }}</p></div><div class="actions"><button class="btn" :class="{copied}" type="button" @click="copyResult"><span>{{ copied ? '✓' : '⬠' }}</span> {{ copied ? copy.copied : copy.copy }}</button><a class="btn ghost" :href="result.url" target="_blank" rel="noopener"><span>↗</span> {{ copy.open }}</a></div></div></section><div class="footer"><span>EEEE</span> · {{ copy.description }}<span class="footer-e">e e e</span></div></template>
       </main>`
   }).mount(root);
 })();
