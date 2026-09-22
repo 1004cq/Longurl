@@ -61,6 +61,7 @@ func main() {
 				log.Printf("database unavailable at startup: %v", err)
 				_ = db.Close()
 			} else {
+				migrateSchema(db)
 				a.db = db
 			}
 		}
@@ -276,8 +277,8 @@ func (a *app) create(w http.ResponseWriter, r *http.Request) {
 		}
 		res, err := db.ExecContext(
 			r.Context(),
-			"INSERT INTO links (e_length,target_url,clicks,enabled,created_at,updated_at) VALUES (?,?,0,1,NOW(),NOW())",
-			length, target,
+			"INSERT INTO links (e_length,target_url,created_ip,clicks,enabled,created_at,updated_at) VALUES (?,?,?,0,1,NOW(),NOW())",
+			length, target, clientIP(r),
 		)
 		if err != nil {
 			if isDup(err) {
