@@ -1,1 +1,23 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EEEE Admin Login</title><style>body{margin:0;background:#07090d;color:#eef2f7;font-family:system-ui;display:grid;place-items:center;min-height:100vh}.box{width:min(420px,calc(100% - 28px));padding:24px;border:1px solid #252c38;background:#10141b;border-radius:20px}input,button{width:100%;box-sizing:border-box;padding:12px;border-radius:11px;border:1px solid #303846;background:#080b10;color:#eef2f7;font:inherit}button{margin-top:12px;background:#eef2f7;color:#080b10;cursor:pointer}.err{color:#ffaaaa;margin:10px 0}</style></head><body><form class="box" method="post"><h1>EEEE Admin</h1><p>Go administration console</p>{{if .Error}}<div class="err">{{.Error}}</div>{{end}}<input type="password" name="password" placeholder="Admin password" autofocus required><button>Sign in</button></form></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>管理员登录 · EEEE</title>
+<link rel="stylesheet" href="/assets/admin.css">
+</head>
+<body class="login-page">
+  <main class="login-box">
+    <div class="brand"><span class="brand-mark">E</span><span>EEEE 控制台</span></div>
+    <h1>管理员登录</h1>
+    <p class="lead">登录后管理短链接、查看访问数据和调整站点设置。</p>
+    {{if .Error}}<div class="err" role="alert">{{.Error}}</div>{{end}}
+    <form method="post">
+      <label class="login-label" for="password">管理员密码</label>
+      <input class="input" id="password" type="password" name="password" placeholder="请输入管理员密码" autocomplete="current-password" autofocus required>
+      <button class="btn primary" type="submit">安全登录</button>
+    </form>
+    <p class="login-foot">请勿在公共设备上保存登录信息</p>
+  </main>
+</body>
+</html>

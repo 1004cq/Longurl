@@ -34,6 +34,12 @@ type adminLog struct {
 	Referer   string
 }
 
+type adminIPStat struct {
+	IP           string
+	Clicks       int64
+	LastClickedAt time.Time
+}
+
 type adminDay struct {
 	Day    string
 	Clicks int64
@@ -54,6 +60,7 @@ type adminPageData struct {
 	Links        []adminLink
 	Edit         *adminLink
 	Recent       []adminLog
+	IPStats      []adminIPStat
 	Days         []adminDay
 	APITokenMask string
 	BaseURL      string
@@ -86,7 +93,7 @@ func (a *app) adminLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
 		if a.dbRef() != nil && !a.rateLimit(r, "login", 8) {
-			a.renderLogin(w, "Too many attempts. Try again later.")
+			a.renderLogin(w, "登录尝试过于频繁，请稍后再试。")
 			return
 		}
 		cfg := a.store.get()
@@ -95,7 +102,7 @@ func (a *app) adminLogin(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/admin/", http.StatusFound)
 			return
 		}
-		a.renderLogin(w, "Invalid password.")
+		a.renderLogin(w, "密码错误，请重新输入。")
 		return
 	}
 	a.renderLogin(w, "")
@@ -148,9 +155,10 @@ func (a *app) adminRoot(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data.Links, _ = a.fetchLinks("", 1, 10)
 	}
-	if view == "analytics" || view == "visits" {
-		data.Recent = a.fetchRecentLogs(200)
-		data.Days = a.fetchDays(7)
+		if view == "analytics" || view == "visits" {
+			data.Recent = a.fetchRecentLogs(200)
+			data.IPStats = a.fetchIPStats(100)
+			data.Days = a.fetchDays(7)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -237,6 +245,26 @@ func (a *app) fetchRecentLogs(limit int) []adminLog {
 	for rows.Next() {
 		var x adminLog
 		if rows.Scan(&x.ClickedAt, &x.Length, &x.Target, &x.IP, &x.Referer) == nil {
+			out = append(out, x)
+		}
+	}
+	return out
+}
+
+func (a *app) fetchIPStats(limit int) []adminIPStat {
+	db := a.dbRef()
+	if db == nil {
+		return nil
+	}
+	rows, err := db.Query("SELECT ip,COUNT(*),MAX(clicked_at) FROM click_logs GROUP BY ip ORDER BY COUNT(*) DESC,MAX(clicked_at) DESC LIMIT ?", limit)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []adminIPStat
+	for rows.Next() {
+		var x adminIPStat
+		if rows.Scan(&x.IP, &x.Clicks, &x.LastClickedAt) == nil {
 			out = append(out, x)
 		}
 	}

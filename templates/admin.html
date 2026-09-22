@@ -1,40 +1,67 @@
 <!doctype html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>EEEE Admin</title>
-<style>
-:root{color-scheme:dark;background:#07090d;color:#eef2f7;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0%,#171b24 0,#090b10 36%,#06070a 100%);min-height:100vh}
-a{color:inherit;text-decoration:none}.shell{width:min(1180px,calc(100% - 32px));margin:auto;padding:24px 0 60px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:22px}.brand{font-weight:800;letter-spacing:.18em}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a,.btn{border:1px solid #2a303b;background:#11151c;color:#eef2f7;border-radius:12px;padding:10px 14px;font:inherit;cursor:pointer}.nav a.active,.btn.primary{background:#eef2f7;color:#090b10}.muted{color:#8f9aaa}.flash{margin:0 0 18px;padding:12px 14px;border:1px solid #25452f;background:#0d1b13;border-radius:12px;color:#9ee2af}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.stat,.card{background:rgba(14,17,23,.92);border:1px solid #202632;border-radius:18px}.stat{padding:18px}.stat b{display:block;font-size:28px;margin-top:6px}.card{padding:18px;margin-bottom:16px}.card h2{margin:0 0 14px;font-size:18px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #202632;vertical-align:top}th{font-size:12px;color:#8f9aaa;text-transform:uppercase}.url{max-width:420px;overflow-wrap:anywhere}.row-actions{display:flex;gap:7px;flex-wrap:wrap}.row-actions form{display:inline}.danger{border-color:#5b2525;color:#ffb0b0}.search,.settings{display:flex;gap:10px;flex-wrap:wrap}.search input,.settings input{flex:1 1 220px;background:#090c11;color:#eef2f7;border:1px solid #2a303b;border-radius:11px;padding:11px}.settings label{display:flex;flex-direction:column;gap:6px;flex:1 1 220px;color:#aab3bf;font-size:13px}.pagination{display:flex;gap:8px;margin-top:14px}.pagination a{border:1px solid #2a303b;border-radius:10px;padding:8px 11px}.bars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:160px}.bar{display:flex;flex-direction:column;justify-content:flex-end;gap:7px;height:100%;text-align:center;color:#8f9aaa;font-size:11px}.bar i{display:block;background:#dfe7f2;border-radius:7px 7px 2px 2px;min-height:3px}.token{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;background:#090c11;border:1px solid #2a303b;border-radius:10px;padding:12px}
-@media(max-width:760px){.shell{width:min(100% - 20px,1180px);padding-top:14px}.top{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:repeat(2,1fr)}.card{padding:13px;overflow-x:auto}.hide-sm{display:none}th,td{padding:9px 7px}.url{min-width:220px}.bars{gap:4px}}
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{if eq .View "links"}}链接管理{{else if or (eq .View "analytics") (eq .View "visits")}}跳转访问{{else if eq .View "settings"}}系统设置{{else}}仪表盘{{end}} · EEEE</title>
+<link rel="stylesheet" href="/assets/admin.css">
 </head>
-<body><main class="shell">
-<div class="top"><a class="brand" href="/admin/">EEEE ADMIN</a><div class="nav">
-<a class="{{if eq .View "dashboard"}}active{{end}}" href="/admin/">仪表盘</a>
-<a class="{{if eq .View "links"}}active{{end}}" href="/admin/?view=links">生成的链接</a>
-<a class="{{if or (eq .View "analytics") (eq .View "visits")}}active{{end}}" href="/admin/?view=analytics">跳转访问</a>
-<a class="{{if eq .View "settings"}}active{{end}}" href="/admin/?view=settings">设置</a>
-<a href="/">站点</a><a href="/admin/logout">退出</a>
-</div></div>
-{{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
-{{if eq .View "dashboard"}}
-<div class="grid"><div class="stat"><span class="muted">链接总数</span><b>{{.TotalLinks}}</b></div><div class="stat"><span class="muted">启用中</span><b>{{.ActiveLinks}}</b></div><div class="stat"><span class="muted">跳转总次</span><b>{{.TotalClicks}}</b></div><div class="stat"><span class="muted">今日跳转</span><b>{{.TodayClicks}}</b></div></div>
-<section class="card"><h2>最近生成</h2>{{template "linksTable" .}}</section>
-{{else if eq .View "links"}}
-<section class="card"><form class="search" method="get"><input type="hidden" name="view" value="links"><input name="q" value="{{.Query}}" placeholder="搜目标链接、长度或生成 IP"><button class="btn primary">搜索</button><a class="btn" href="/admin/export/links.csv">导出 CSV</a></form></section>
-{{if .Edit}}<section class="card"><h2>编辑 — {{.Edit.Length}} e</h2><p class="muted">生成 IP：{{.Edit.CreatedIP}}</p><form class="settings" method="post" action="/admin/link/save"><input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="id" value="{{.Edit.ID}}"><label class="full">目标 URL<input name="target_url" value="{{.Edit.Target}}" required></label><label>过期时间<input name="expires_at" value="{{.Edit.ExpiresAt}}" placeholder="YYYY-MM-DD HH:MM:SS"></label><div style="flex-basis:100%"><button class="btn primary">保存</button> <a class="btn" href="/admin/?view=links">取消</a></div></form></section>{{end}}
-<section class="card"><h2>全部生成记录</h2>{{template "linksTable" .}}{{if gt .Pages 1}}<div class="pagination">{{if gt .Page 1}}<a href="/admin/?view=links&q={{.Query}}&page={{sub .Page 1}}">←</a>{{end}}<span class="btn">{{.Page}} / {{.Pages}}</span>{{if lt .Page .Pages}}<a href="/admin/?view=links&q={{.Query}}&page={{add .Page 1}}">→</a>{{end}}</div>{{end}}</section>
-{{else if or (eq .View "analytics") (eq .View "visits")}}
-<div class="grid"><div class="stat"><span class="muted">跳转总次</span><b>{{.TotalClicks}}</b></div><div class="stat"><span class="muted">今日</span><b>{{.TodayClicks}}</b></div><div class="stat"><span class="muted">链接</span><b>{{.TotalLinks}}</b></div><div class="stat"><span class="muted">启用中</span><b>{{.ActiveLinks}}</b></div></div>
-<section class="card"><h2>近 7 天跳转</h2><div class="bars">{{range .Days}}<div class="bar"><i style="height:{{.Height}}px"></i><span>{{.Day}}<br>{{.Clicks}}</span></div>{{end}}</div></section>
-<section class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2>访问时间 / IP</h2><a class="btn" href="/admin/export/clicks.csv">导出 CSV</a></div><table><thead><tr><th>时间</th><th>长度</th><th>跳转到</th><th>IP</th><th class="hide-sm">来源</th></tr></thead><tbody>{{range .Recent}}<tr><td>{{date .ClickedAt}}</td><td>{{.Length}} e</td><td class="url">{{.Referer}}</td><td>{{.IP}}</td><td class="url hide-sm">{{.Referer}}</td></tr>{{else}}<tr><td colspan="5" class="muted">还没有跳转记录。</td></tr>{{end}}</tbody></table></section>
-{{else}}
-<section class="card"><h2>应用设置</h2><form class="settings" method="post" action="/admin/settings"><input type="hidden" name="_csrf" value="{{.CSRF}}"><label>Base URL<input name="base_url" value="{{.BaseURL}}" required></label><label>最小长度<input type="number" name="min_length" value="{{.MinLength}}" required></label><label>最大长度<input type="number" name="max_length" value="{{.MaxLength}}" required></label><label>每分钟生成<input type="number" name="create_per_minute" value="{{.CreatePerMin}}" required></label><label>每分钟 API<input type="number" name="api_per_minute" value="{{.APIPerMin}}" required></label><div style="flex-basis:100%"><button class="btn primary">保存</button></div></form></section>
-<section class="card"><h2>API token</h2><div class="token">{{.APITokenMask}}</div><form method="post" action="/admin/token/rotate" style="margin-top:12px"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="btn">轮换 Token</button></form></section>
-<section class="card"><h2>修改密码</h2><form class="settings" method="post" action="/admin/password"><input type="hidden" name="_csrf" value="{{.CSRF}}"><label>当前密码<input type="password" name="current_password" required></label><label>新密码<input type="password" name="new_password" minlength="10" required></label><div style="flex-basis:100%"><button class="btn primary">更新密码</button></div></form></section>
-{{end}}
-</main></body></html>
+<body>
+<main class="shell">
+  <header class="topbar">
+    <a class="brand" href="/admin/"><span class="brand-mark">E</span><span>EEEE 控制台</span></a>
+    <nav class="nav" aria-label="后台导航">
+      <a class="{{if eq .View "dashboard"}}active{{end}}" href="/admin/">仪表盘</a>
+      <a class="{{if eq .View "links"}}active{{end}}" href="/admin/?view=links">链接管理</a>
+      <a class="{{if or (eq .View "analytics") (eq .View "visits")}}active{{end}}" href="/admin/?view=analytics">跳转访问</a>
+      <a class="{{if eq .View "settings"}}active{{end}}" href="/admin/?view=settings">系统设置</a>
+      <a href="/" target="_blank" rel="noopener">查看站点</a>
+      <a class="nav-exit" href="/admin/logout">退出</a>
+    </nav>
+  </header>
 
-{{define "linksTable"}}<table><thead><tr><th>e</th><th>跳转目标</th><th>点击</th><th class="hide-sm">生成时间</th><th class="hide-sm">生成 IP</th><th>状态</th><th>操作</th></tr></thead><tbody>{{range .Links}}<tr><td>{{.Length}}</td><td class="url"><a href="{{.LongURL}}" target="_blank" rel="noopener">{{.Target}}</a></td><td>{{.Clicks}}</td><td class="hide-sm">{{date .CreatedAt}}</td><td class="hide-sm">{{.CreatedIP}}</td><td>{{if .Enabled}}开{{else}}关{{end}}</td><td><div class="row-actions"><a class="btn" href="/admin/?view=links&edit={{.ID}}">编辑</a><form method="post" action="/admin/link/toggle"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}"><button class="btn">{{if .Enabled}}停用{{else}}启用{{end}}</button></form><form method="post" action="/admin/link/delete" onsubmit="return confirm('删除这条链接？')"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}"><button class="btn danger">删除</button></form></div></td></tr>{{else}}<tr><td colspan="7" class="muted">还没有生成记录。</td></tr>{{end}}</tbody></table>{{end}}
+  {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
+
+  {{if eq .View "dashboard"}}
+    <div class="page-heading"><div><p class="eyebrow">OVERVIEW</p><h1>仪表盘</h1></div><p class="hint">数据实时同步 · 时间均为北京时间</p></div>
+    <section class="grid" aria-label="数据概览">
+      <div class="stat"><span class="stat-label">链接总数</span><b>{{.TotalLinks}}</b></div>
+      <div class="stat"><span class="stat-label">启用中</span><b>{{.ActiveLinks}}</b></div>
+      <div class="stat"><span class="stat-label">跳转总次</span><b>{{.TotalClicks}}</b></div>
+      <div class="stat"><span class="stat-label">今日跳转</span><b>{{.TodayClicks}}</b></div>
+    </section>
+    <section class="card"><div class="card-heading"><h2>最近生成</h2><a class="btn" href="/admin/?view=links">查看全部链接</a></div>{{template "linksTable" .}}</section>
+
+  {{else if eq .View "links"}}
+    <div class="page-heading"><div><p class="eyebrow">LINKS</p><h1>链接管理</h1></div><p class="hint">管理所有已生成的短链接</p></div>
+    <section class="card"><form class="search" method="get"><input type="hidden" name="view" value="links"><input name="q" value="{{.Query}}" placeholder="搜索目标链接、长度或生成 IP" aria-label="搜索链接"><button class="btn primary" type="submit">搜索</button><a class="btn" href="/admin/export/links.csv">导出 CSV</a></form></section>
+    {{if .Edit}}
+      <section class="card"><div class="card-heading"><div><h2>编辑链接</h2><p class="hint">长度 {{.Edit.Length}} e · 生成 IP {{.Edit.CreatedIP}}</p></div></div>
+        <form class="settings" method="post" action="/admin/link/save">
+          <input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="id" value="{{.Edit.ID}}">
+          <label class="full"><span class="field-title">目标 URL</span><input name="target_url" value="{{.Edit.Target}}" required></label>
+          <label><span class="field-title">过期时间</span><input name="expires_at" value="{{.Edit.ExpiresAt}}" placeholder="YYYY-MM-DD HH:mm:ss"><span class="hint">留空表示不过期。</span></label>
+          <div class="actions-row full"><button class="btn primary" type="submit">保存修改</button><a class="btn" href="/admin/?view=links">取消</a></div>
+        </form>
+      </section>
+    {{end}}
+    <section class="card"><div class="card-heading"><h2>全部生成记录</h2><span class="hint">共 {{.TotalLinks}} 条</span></div>{{template "linksTable" .}}{{if gt .Pages 1}}<div class="pagination">{{if gt .Page 1}}<a class="btn" href="/admin/?view=links&q={{.Query}}&page={{sub .Page 1}}">上一页</a>{{end}}<span class="current">第 {{.Page}} / {{.Pages}} 页</span>{{if lt .Page .Pages}}<a class="btn" href="/admin/?view=links&q={{.Query}}&page={{add .Page 1}}">下一页</a>{{end}}</div>{{end}}</section>
+
+  {{else if or (eq .View "analytics") (eq .View "visits")}}
+    <div class="page-heading"><div><p class="eyebrow">ANALYTICS</p><h1>跳转访问</h1></div><a class="btn" href="/admin/export/clicks.csv">导出 CSV</a></div>
+    <section class="grid" aria-label="访问概览"><div class="stat"><span class="stat-label">跳转总次</span><b>{{.TotalClicks}}</b></div><div class="stat"><span class="stat-label">今日跳转</span><b>{{.TodayClicks}}</b></div><div class="stat"><span class="stat-label">链接总数</span><b>{{.TotalLinks}}</b></div><div class="stat"><span class="stat-label">启用中</span><b>{{.ActiveLinks}}</b></div></section>
+    <section class="card"><div class="card-heading"><div><h2>近 7 天跳转</h2><p class="hint">按天统计访问次数</p></div></div><div class="bars">{{range .Days}}<div class="bar"><i style="height:{{.Height}}px" title="{{.Clicks}} 次"></i><span>{{.Day}}<br>{{.Clicks}} 次</span></div>{{end}}</div></section>
+    <section class="card"><div class="card-heading"><div><h2>访问 IP 汇总</h2><p class="hint">按访问来源 IP 统计跳转次数，最多展示 100 个 IP</p></div></div><div class="table-scroll"><table><thead><tr><th>访问 IP</th><th>访问次数</th><th>最近访问时间</th></tr></thead><tbody>{{range .IPStats}}<tr><td class="mono">{{.IP}}</td><td><span class="badge">{{.Clicks}} 次</span></td><td>{{date .LastClickedAt}}</td></tr>{{else}}<tr><td class="empty" colspan="3">还没有访问 IP 统计。</td></tr>{{end}}</tbody></table></div></section>
+    <section class="card"><div class="card-heading"><div><h2>访问明细</h2><p class="hint">时间、目标地址、访问 IP 与来源分列展示</p></div></div><div class="table-scroll"><table><thead><tr><th>访问时间</th><th>e 长度</th><th>跳转到哪个地址</th><th>访问 IP</th><th>来源 Referer</th></tr></thead><tbody>{{range .Recent}}<tr><td>{{date .ClickedAt}}</td><td>{{.Length}} e</td><td class="url readable-url" title="{{.Target}}">{{.Target}}</td><td class="mono">{{.IP}}</td><td class="url" title="{{.Referer}}">{{if .Referer}}{{.Referer}}{{else}}直接访问{{end}}</td></tr>{{else}}<tr><td class="empty" colspan="5">还没有跳转记录。</td></tr>{{end}}</tbody></table></div></section>
+
+  {{else}}
+    <div class="page-heading"><div><p class="eyebrow">SETTINGS</p><h1>系统设置</h1></div><p class="hint">调整站点运行规则与安全策略</p></div>
+    <section class="card"><div class="card-heading"><div><h2>基础配置</h2><p class="hint">用于控制站点展示和短链接生成规则</p></div></div><form class="settings-group" method="post" action="/admin/settings"><input type="hidden" name="_csrf" value="{{.CSRF}}"><div class="group-title">站点<small>公开访问地址和链接长度范围</small></div><label><span class="field-title">站点 Base URL</span><input name="base_url" value="{{.BaseURL}}" required><span class="hint">用于拼接生成后的短链接。</span></label><label><span class="field-title">最小长度</span><input type="number" name="min_length" value="{{.MinLength}}" required><span class="hint">短链接允许的最短 e 长度。</span></label><label><span class="field-title">最大长度</span><input type="number" name="max_length" value="{{.MaxLength}}" required><span class="hint">最大值上限为 3000。</span></label><div class="group-title">限流<small>控制短时间内的创建和 API 请求量</small></div><label><span class="field-title">每分钟生成</span><input type="number" name="create_per_minute" value="{{.CreatePerMin}}" required><span class="hint">单个来源每分钟可生成的链接数量。</span></label><label><span class="field-title">每分钟 API 请求</span><input type="number" name="api_per_minute" value="{{.APIPerMin}}" required><span class="hint">单个来源每分钟可调用 API 的次数。</span></label><div class="actions-row full"><button class="btn primary" type="submit">保存设置</button></div></form></section>
+    <section class="card"><div class="card-heading"><div><h2>API 安全</h2><p class="hint">Token 用于服务间调用，请妥善保管</p></div></div><div class="token">{{.APITokenMask}}</div><form method="post" action="/admin/token/rotate" style="margin-top:12px"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="btn" type="submit">轮换 Token</button></form></section>
+    <section class="card"><div class="card-heading"><div><h2>管理员密码</h2><p class="hint">建议使用至少 10 位且不易猜测的密码</p></div></div><form class="settings" method="post" action="/admin/password"><input type="hidden" name="_csrf" value="{{.CSRF}}"><label><span class="field-title">当前密码</span><input type="password" name="current_password" required></label><label><span class="field-title">新密码</span><input type="password" name="new_password" minlength="10" required></label><div class="actions-row full"><button class="btn primary" type="submit">更新密码</button></div></form></section>
+  {{end}}
+</main>
+</body>
+</html>
+
+{{define "linksTable"}}<div class="table-scroll"><table><thead><tr><th>e 长度</th><th>目标链接</th><th>点击数</th><th>生成时间</th><th>生成 IP</th><th>状态</th><th>操作</th></tr></thead><tbody>{{range .Links}}<tr><td>{{.Length}} e</td><td class="url" title="{{.Target}}"><a href="{{.LongURL}}" target="_blank" rel="noopener">{{.Target}}</a></td><td>{{.Clicks}}</td><td>{{date .CreatedAt}}</td><td class="mono">{{.CreatedIP}}</td><td>{{if .Enabled}}<span class="badge">启用</span>{{else}}<span class="badge off">停用</span>{{end}}</td><td><div class="row-actions"><a class="btn" href="/admin/?view=links&edit={{.ID}}">编辑</a><form method="post" action="/admin/link/toggle"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}"><button class="btn" type="submit">{{if .Enabled}}停用{{else}}启用{{end}}</button></form><form method="post" action="/admin/link/delete" onsubmit="return confirm('确定删除这条链接吗？')"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}"><button class="btn danger" type="submit">删除</button></form></div></td></tr>{{else}}<tr><td class="empty" colspan="7">还没有生成记录。</td></tr>{{end}}</tbody></table></div>{{end}}
