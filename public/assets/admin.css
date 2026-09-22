@@ -63,6 +63,11 @@ h2 { margin-bottom: 18px; font-size: 16px; }
 .input:hover, .search input:hover, .settings input:hover { border-color: #3b4b62; }
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { width: 100%; min-width: 860px; border-collapse: collapse; }
+.links-table { min-width: 1160px; }
+.links-table th:nth-child(1) { min-width: 210px; }
+.links-table th:nth-child(2) { min-width: 125px; }
+.links-table th:nth-child(3) { min-width: 240px; }
+.links-table th:nth-child(5) { min-width: 180px; }
 th, td { padding: 13px 10px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: middle; }
 th { color: var(--subtle); font-size: 11px; font-weight: 600; letter-spacing: .06em; white-space: nowrap; }
 td { color: #dbe2eb; font-size: 13px; }
@@ -70,6 +75,7 @@ tbody tr:hover { background: rgba(111, 156, 255, .035); }
 .url { max-width: 390px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .url a { display: block; color: #b9cdfd; }
 .url a:hover { color: #e2eaff; text-decoration: underline; }
+.access-ips { max-width: 240px; overflow-wrap: anywhere; color: #aebbd0; font-size: 12px; line-height: 1.5; }
 .mono { color: #b7c4d5; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif; font-size: 12px; }
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 7px; border-radius: 4px; background: rgba(99, 184, 135, .12); color: #8fd0a9; font-size: 12px; white-space: nowrap; }
 .badge::before { width: 5px; height: 5px; border-radius: 50%; background: currentColor; content: ""; }

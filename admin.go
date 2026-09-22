@@ -20,6 +20,7 @@ type adminLink struct {
 	Target    string
 	CreatedIP string
 	Clicks    int64
+	AccessIPs string
 	Enabled   bool
 	CreatedAt time.Time
 	ExpiresAt string
@@ -191,7 +192,7 @@ func (a *app) fetchLinks(q string, page, perPage int) ([]adminLink, int) {
 		page = pages
 	}
 	args = append(args, perPage, (page-1)*perPage)
-	rows, err := db.Query("SELECT id,e_length,target_url,created_ip,clicks,enabled,created_at,expires_at FROM links"+where+" ORDER BY id DESC LIMIT ? OFFSET ?", args...)
+	rows, err := db.Query("SELECT id,e_length,target_url,created_ip,clicks,COALESCE((SELECT GROUP_CONCAT(DISTINCT cl.ip ORDER BY cl.ip SEPARATOR ', ') FROM click_logs cl WHERE cl.link_id=links.id),''),enabled,created_at,expires_at FROM links"+where+" ORDER BY id DESC LIMIT ? OFFSET ?", args...)
 	if err != nil {
 		return nil, pages
 	}
@@ -202,7 +203,7 @@ func (a *app) fetchLinks(q string, page, perPage int) ([]adminLink, int) {
 	for rows.Next() {
 		var l adminLink
 		var expires *time.Time
-		if err := rows.Scan(&l.ID, &l.Length, &l.Target, &l.CreatedIP, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires); err != nil {
+			if err := rows.Scan(&l.ID, &l.Length, &l.Target, &l.CreatedIP, &l.Clicks, &l.AccessIPs, &l.Enabled, &l.CreatedAt, &expires); err != nil {
 			continue
 		}
 		if expires != nil {
@@ -221,8 +222,8 @@ func (a *app) fetchLink(id int64) *adminLink {
 	}
 	var l adminLink
 	var expires *time.Time
-	err := db.QueryRow("SELECT id,e_length,target_url,created_ip,clicks,enabled,created_at,expires_at FROM links WHERE id=? LIMIT 1", id).
-		Scan(&l.ID, &l.Length, &l.Target, &l.CreatedIP, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires)
+	err := db.QueryRow("SELECT id,e_length,target_url,created_ip,clicks,COALESCE((SELECT GROUP_CONCAT(DISTINCT cl.ip ORDER BY cl.ip SEPARATOR ', ') FROM click_logs cl WHERE cl.link_id=links.id),''),enabled,created_at,expires_at FROM links WHERE id=? LIMIT 1", id).
+		Scan(&l.ID, &l.Length, &l.Target, &l.CreatedIP, &l.Clicks, &l.AccessIPs, &l.Enabled, &l.CreatedAt, &expires)
 	if err != nil {
 		return nil
 	}
