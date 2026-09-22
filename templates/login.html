@@ -13,8 +13,10 @@
     <p class="lead">登录后管理短链接、查看访问数据和调整站点设置。</p>
     {{if .Error}}<div class="err" role="alert">{{.Error}}</div>{{end}}
     <form method="post">
+      <label class="login-label" for="username">管理员账号</label>
+      <input class="input" id="username" type="text" name="username" placeholder="请输入管理员账号" autocomplete="username" autofocus required>
       <label class="login-label" for="password">管理员密码</label>
-      <input class="input" id="password" type="password" name="password" placeholder="请输入管理员密码" autocomplete="current-password" autofocus required>
+      <input class="input" id="password" type="password" name="password" placeholder="请输入管理员密码" autocomplete="current-password" required>
       <button class="btn primary" type="submit">安全登录</button>
     </form>
     <p class="login-foot">请勿在公共设备上保存登录信息</p>

@@ -35,8 +35,8 @@ type adminLog struct {
 }
 
 type adminIPStat struct {
-	IP           string
-	Clicks       int64
+	IP            string
+	Clicks        int64
 	LastClickedAt time.Time
 }
 
@@ -47,27 +47,28 @@ type adminDay struct {
 }
 
 type adminPageData struct {
-	View         string
-	CSRF         string
-	Flash        string
-	Query        string
-	Page         int
-	Pages        int
-	TotalLinks   int64
-	ActiveLinks  int64
-	TotalClicks  int64
-	TodayClicks  int64
-	Links        []adminLink
-	Edit         *adminLink
-	Recent       []adminLog
-	IPStats      []adminIPStat
-	Days         []adminDay
-	APITokenMask string
-	BaseURL      string
-	MinLength    int
-	MaxLength    int
-	CreatePerMin int
-	APIPerMin    int
+	View          string
+	CSRF          string
+	Flash         string
+	AdminUsername string
+	Query         string
+	Page          int
+	Pages         int
+	TotalLinks    int64
+	ActiveLinks   int64
+	TotalClicks   int64
+	TodayClicks   int64
+	Links         []adminLink
+	Edit          *adminLink
+	Recent        []adminLog
+	IPStats       []adminIPStat
+	Days          []adminDay
+	APITokenMask  string
+	BaseURL       string
+	MinLength     int
+	MaxLength     int
+	CreatePerMin  int
+	APIPerMin     int
 }
 
 var adminTemplates = template.Must(template.New("admin.html").Funcs(template.FuncMap{
@@ -97,7 +98,8 @@ func (a *app) adminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cfg := a.store.get()
-		if passwordOK(cfg.AdminPasswordHash, r.FormValue("password")) {
+		username := strings.TrimSpace(r.FormValue("username"))
+		if hmac.Equal([]byte(username), []byte(cfg.AdminUsername)) && passwordOK(cfg.AdminPasswordHash, r.FormValue("password")) {
 			a.setAdminSession(w, r)
 			http.Redirect(w, r, "/admin/", http.StatusFound)
 			return
@@ -135,6 +137,7 @@ func (a *app) adminRoot(w http.ResponseWriter, r *http.Request) {
 
 	data := adminPageData{View: view, CSRF: a.csrfToken(r), Flash: r.URL.Query().Get("ok")}
 	cfg := a.store.get()
+	data.AdminUsername = cfg.AdminUsername
 	data.BaseURL, data.MinLength, data.MaxLength = cfg.BaseURL, cfg.MinLength, cfg.MaxLength
 	data.CreatePerMin, data.APIPerMin = cfg.CreatePerMinute, cfg.APIPerMinute
 	data.APITokenMask = maskToken(cfg.APIToken)
@@ -155,10 +158,10 @@ func (a *app) adminRoot(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data.Links, _ = a.fetchLinks("", 1, 10)
 	}
-		if view == "analytics" || view == "visits" {
-			data.Recent = a.fetchRecentLogs(200)
-			data.IPStats = a.fetchIPStats(100)
-			data.Days = a.fetchDays(7)
+	if view == "analytics" || view == "visits" {
+		data.Recent = a.fetchRecentLogs(200)
+		data.IPStats = a.fetchIPStats(100)
+		data.Days = a.fetchDays(7)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -411,15 +414,26 @@ func (a *app) adminPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	cfg := a.store.get()
 	if !passwordOK(cfg.AdminPasswordHash, r.FormValue("current_password")) {
-		http.Error(w, "current password is incorrect", http.StatusBadRequest)
+		http.Error(w, "当前密码错误", http.StatusBadRequest)
+		return
+	}
+	username := strings.TrimSpace(r.FormValue("admin_username"))
+	if !validAdminUsername(username) {
+		http.Error(w, "管理员账号需为 3-64 个字符，不能包含空格", http.StatusBadRequest)
 		return
 	}
 	hash, err := hashPassword(r.FormValue("new_password"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "新密码至少需要 10 位", http.StatusBadRequest)
 		return
 	}
+	cfg.AdminUsername = username
 	cfg.AdminPasswordHash = hash
+	cfg.SessionSecret = randomHex(32)
+	if cfg.SessionSecret == "" {
+		http.Error(w, "无法生成新的会话密钥", http.StatusInternalServerError)
+		return
+	}
 	if err := a.store.persist(cfg); err != nil {
 		http.Error(w, "failed to save password", http.StatusInternalServerError)
 		return

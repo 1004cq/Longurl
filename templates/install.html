@@ -1,1 +1,34 @@
-<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EEEE Installer</title><style>body{margin:0;background:#07090d;color:#eef2f7;font-family:system-ui;min-height:100vh}.box{width:min(760px,calc(100% - 28px));margin:40px auto;padding:24px;border:1px solid #252c38;background:#10141b;border-radius:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:flex;flex-direction:column;gap:6px;color:#aab3bf}input{padding:12px;border-radius:10px;border:1px solid #303846;background:#080b10;color:#eef2f7;font:inherit}button{margin-top:18px;padding:13px 18px;border:0;border-radius:11px;background:#eef2f7;color:#080b10;font-weight:700;cursor:pointer}.err{padding:12px;border-radius:10px;background:#351313;color:#ffb3b3;margin:12px 0}.ok{padding:12px;border-radius:10px;background:#12301c;color:#aff0c0;margin:12px 0}.full{grid-column:1/-1}@media(max-width:620px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}</style></head><body><main class="box"><h1>EEEE Go Installer</h1><p>配置 MySQL、站点地址和管理员密码。安装完成后 PHP 不参与运行。</p>{{if .Error}}<div class="err">{{.Error}}</div>{{end}}{{if .Success}}<div class="ok">安装完成。<a href="/admin/login">进入后台</a></div>{{else}}<form method="post"><input type="hidden" name="_token" value="{{.Token}}"><div class="grid"><label>DB Host<input name="db_host" value="{{.DBHost}}" required></label><label>DB Port<input name="db_port" value="{{.DBPort}}" required></label><label>DB Name<input name="db_name" value="{{.DBName}}" required></label><label>DB User<input name="db_user" value="{{.DBUser}}" required></label><label class="full">DB Password<input type="password" name="db_pass" required></label><label class="full">Website URL<input name="base_url" value="{{.BaseURL}}" placeholder="https://example.com" required></label><label class="full">Admin Password<input type="password" name="admin_password" minlength="10" required></label></div><button>Install EEEE</button></form>{{end}}</main></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>安装 EEEE Long URL</title>
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;background:#101214;color:#e9edf2}*{box-sizing:border-box}body{margin:0;background:#101214}.box{width:min(760px,calc(100% - 28px));margin:40px auto;padding:28px;border:1px solid #30363d;background:#181b20;border-radius:8px}h1{margin:0 0 8px;font-size:24px}p{color:#9da7b3;font-size:13px;line-height:1.7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}label{display:flex;flex-direction:column;gap:7px;color:#cbd2da;font-size:13px}.full{grid-column:1/-1}input{width:100%;padding:10px 11px;border:1px solid #3a424d;border-radius:5px;background:#0f1114;color:#f2f5f8;font:inherit}input:focus{outline:2px solid #567fcf;outline-offset:1px}.help{margin:5px 0 0;color:#7e8997;font-size:12px}.button{margin-top:22px;padding:10px 18px;border:1px solid #648bd8;border-radius:5px;background:#4d74c4;color:#fff;font:inherit;cursor:pointer}.err,.ok{margin-top:18px;padding:11px 12px;border-radius:5px;font-size:13px}.err{border:1px solid #713c42;background:#2b181b;color:#ffb7be}.ok{border:1px solid #376449;background:#16271c;color:#a7dfb8}@media(max-width:620px){.box{margin:18px auto;padding:20px}.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<main class="box">
+<h1>安装 EEEE Long URL</h1>
+<p>配置 MySQL、站点地址和管理员账号。管理员密码将使用 bcrypt 哈希保存，不会保存明文密码。</p>
+{{if .Error}}<div class="err">{{.Error}}</div>{{end}}
+{{if .Success}}<div class="ok">安装完成。<a href="/admin/login">进入后台</a></div>{{else}}
+<form method="post">
+<input type="hidden" name="_token" value="{{.Token}}">
+<div class="grid">
+<label>数据库主机<input name="db_host" value="{{.DBHost}}" required></label>
+<label>数据库端口<input name="db_port" value="{{.DBPort}}" required></label>
+<label>数据库名称<input name="db_name" value="{{.DBName}}" required></label>
+<label>数据库用户<input name="db_user" value="{{.DBUser}}" required></label>
+<label class="full">数据库密码<input type="password" name="db_pass" autocomplete="new-password" required></label>
+<label class="full">站点 URL<input name="base_url" value="{{.BaseURL}}" placeholder="https://your-domain.example" required></label>
+<label>管理员账号<input name="admin_username" value="{{.AdminUsername}}" minlength="3" maxlength="64" autocomplete="username" required><span class="help">3-64 个字符，不能包含空格。</span></label>
+<label>管理员密码<input type="password" name="admin_password" minlength="10" autocomplete="new-password" required><span class="help">至少 10 位。</span></label>
+</div>
+<button class="button" type="submit">完成安装</button>
+</form>
+{{end}}
+</main>
+</body>
+</html>

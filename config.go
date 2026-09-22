@@ -24,6 +24,7 @@ type runtimeConfig struct {
 	DBPass            string
 	BaseURL           string
 	APIToken          string
+	AdminUsername     string
 	AdminPasswordHash string
 	SessionSecret     string
 	MinLength         int
@@ -112,6 +113,7 @@ func loadRuntimeConfig(path string) runtimeConfig {
 		DBPass:            cfgValue(file, "DB_PASS", ""),
 		BaseURL:           strings.TrimRight(cfgValue(file, "BASE_URL", "http://127.0.0.1:8080"), "/"),
 		APIToken:          cfgValue(file, "API_TOKEN", ""),
+		AdminUsername:     cfgValue(file, "ADMIN_USERNAME", "admin"),
 		AdminPasswordHash: cfgValue(file, "ADMIN_PASSWORD_HASH", ""),
 		SessionSecret:     cfgValue(file, "SESSION_SECRET", ""),
 		MinLength:         cfgInt(file, "MIN_LENGTH", 8),
@@ -159,6 +161,7 @@ func (s *configStore) persist(cfg runtimeConfig) error {
 		"",
 		"BASE_URL=" + envLine(cfg.BaseURL),
 		"API_TOKEN=" + envLine(cfg.APIToken),
+		"ADMIN_USERNAME=" + envLine(cfg.AdminUsername),
 		"ADMIN_PASSWORD_HASH=" + envLine(cfg.AdminPasswordHash),
 		"SESSION_SECRET=" + envLine(cfg.SessionSecret),
 		"MIN_LENGTH=" + strconv.Itoa(cfg.MinLength),
@@ -211,4 +214,16 @@ func passwordOK(hash, password string) bool {
 		return false
 	}
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
+
+func validAdminUsername(username string) bool {
+	if len(username) < 3 || len(username) > 64 {
+		return false
+	}
+	for _, r := range username {
+		if r == ' ' || r == '\t' || r == '\r' || r == '\n' || r < 0x20 {
+			return false
+		}
+	}
+	return true
 }

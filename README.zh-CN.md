@@ -54,7 +54,7 @@ Go 安装器会测试 MySQL、导入 `sql/schema.sql`、以 0640 权限写入 `.
 - `/admin/` — Dashboard
 - Links — 搜索、分页、编辑目标/过期时间、启用/禁用、删除、CSV 导出
 - Analytics — 点击统计、近期访问、7 天趋势、点击日志 CSV
-- Settings — Base URL、e 长度范围、限流、Token 轮换、密码修改
+- `Settings` — Base URL、e 长度范围、限流、Token 轮换、管理员账号和密码修改
 
 也可以复制 `.env.example` 后手动配置，不使用 Web 安装器。
 
@@ -113,6 +113,8 @@ X-API-Token: TOKEN
 - 目标地址限制为公网 http/https
 - 创建/API 限流
 - API Token
+- 管理员账号与密码使用 `.env` 配置，密码使用 bcrypt 哈希保存
+- 修改管理员账号或密码后自动轮换 Session 密钥，使旧登录全部失效
 - 不向客户端输出数据库异常
 - 基础安全响应头
 - 仓库不保存真实密码和 Token

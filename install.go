@@ -16,14 +16,15 @@ var installTemplates = template.Must(template.ParseFS(webFS, "templates/install.
 var safeDBIdent = regexp.MustCompile("^[A-Za-z0-9_]+$")
 
 type installPageData struct {
-	Token   string
-	Error   string
-	Success bool
-	DBHost  string
-	DBPort  string
-	DBName  string
-	DBUser  string
-	BaseURL string
+	Token         string
+	Error         string
+	Success       bool
+	DBHost        string
+	DBPort        string
+	DBName        string
+	DBUser        string
+	BaseURL       string
+	AdminUsername string
 }
 
 func (a *app) installPage(w http.ResponseWriter, r *http.Request) {
@@ -33,12 +34,13 @@ func (a *app) installPage(w http.ResponseWriter, r *http.Request) {
 	}
 	cfg := a.store.get()
 	data := installPageData{
-		Token:   a.installToken,
-		DBHost:  cfg.DBHost,
-		DBPort:  cfg.DBPort,
-		DBName:  cfg.DBName,
-		DBUser:  cfg.DBUser,
-		BaseURL: cfg.BaseURL,
+		Token:         a.installToken,
+		DBHost:        cfg.DBHost,
+		DBPort:        cfg.DBPort,
+		DBName:        cfg.DBName,
+		DBUser:        cfg.DBUser,
+		BaseURL:       cfg.BaseURL,
+		AdminUsername: cfg.AdminUsername,
 	}
 
 	if r.Method == http.MethodPost {
@@ -55,7 +57,8 @@ func (a *app) installPage(w http.ResponseWriter, r *http.Request) {
 		cfg.DBUser = strings.TrimSpace(r.FormValue("db_user"))
 		cfg.DBPass = r.FormValue("db_pass")
 		cfg.BaseURL = strings.TrimRight(strings.TrimSpace(r.FormValue("base_url")), "/")
-		data.DBHost, data.DBPort, data.DBName, data.DBUser, data.BaseURL = cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBUser, cfg.BaseURL
+		cfg.AdminUsername = strings.TrimSpace(r.FormValue("admin_username"))
+		data.DBHost, data.DBPort, data.DBName, data.DBUser, data.BaseURL, data.AdminUsername = cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBUser, cfg.BaseURL, cfg.AdminUsername
 
 		if !safeDBIdent.MatchString(cfg.DBName) {
 			data.Error = "Database name may contain only letters, numbers and underscore."
@@ -69,6 +72,11 @@ func (a *app) installPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if !allowedURL(cfg.BaseURL) {
 			data.Error = "Website URL must be a valid public http/https URL."
+			a.renderInstall(w, data)
+			return
+		}
+		if !validAdminUsername(cfg.AdminUsername) {
+			data.Error = "管理员账号需为 3-64 个字符，不能包含空格。"
 			a.renderInstall(w, data)
 			return
 		}
