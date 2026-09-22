@@ -33,11 +33,11 @@ func (a *app) installPage(w http.ResponseWriter, r *http.Request) {
 	}
 	cfg := a.store.get()
 	data := installPageData{
-		Token: a.installToken,
-		DBHost: cfg.DBHost,
-		DBPort: cfg.DBPort,
-		DBName: cfg.DBName,
-		DBUser: cfg.DBUser,
+		Token:   a.installToken,
+		DBHost:  cfg.DBHost,
+		DBPort:  cfg.DBPort,
+		DBName:  cfg.DBName,
+		DBUser:  cfg.DBUser,
 		BaseURL: cfg.BaseURL,
 	}
 
@@ -106,6 +106,7 @@ func (a *app) installPage(w http.ResponseWriter, r *http.Request) {
 			a.renderInstall(w, data)
 			return
 		}
+		migrateSchema(db)
 		if err := a.store.persist(cfg); err != nil {
 			_ = db.Close()
 			data.Error = "Could not write .env: " + err.Error()
