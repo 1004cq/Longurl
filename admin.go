@@ -2,8 +2,8 @@ package main
 
 import (
 	"crypto/hmac"
-	"encoding/csv"
 	"crypto/sha256"
+	"encoding/csv"
 	"encoding/hex"
 	"html/template"
 	"net/http"
@@ -18,6 +18,7 @@ type adminLink struct {
 	ID        int64
 	Length    int
 	Target    string
+	CreatedIP string
 	Clicks    int64
 	Enabled   bool
 	CreatedAt time.Time
@@ -28,6 +29,7 @@ type adminLink struct {
 type adminLog struct {
 	ClickedAt time.Time
 	Length    int
+	Target    string
 	IP        string
 	Referer   string
 }
@@ -39,26 +41,26 @@ type adminDay struct {
 }
 
 type adminPageData struct {
-	View          string
-	CSRF          string
-	Flash         string
-	Query         string
-	Page          int
-	Pages         int
-	TotalLinks    int64
-	ActiveLinks   int64
-	TotalClicks   int64
-	TodayClicks   int64
-	Links         []adminLink
-	Edit          *adminLink
-	Recent        []adminLog
-	Days          []adminDay
-	APITokenMask  string
-	BaseURL       string
-	MinLength     int
-	MaxLength     int
-	CreatePerMin  int
-	APIPerMin     int
+	View         string
+	CSRF         string
+	Flash        string
+	Query        string
+	Page         int
+	Pages        int
+	TotalLinks   int64
+	ActiveLinks  int64
+	TotalClicks  int64
+	TodayClicks  int64
+	Links        []adminLink
+	Edit         *adminLink
+	Recent       []adminLog
+	Days         []adminDay
+	APITokenMask string
+	BaseURL      string
+	MinLength    int
+	MaxLength    int
+	CreatePerMin int
+	APIPerMin    int
 }
 
 var adminTemplates = template.Must(template.New("admin.html").Funcs(template.FuncMap{
@@ -119,7 +121,7 @@ func (a *app) adminRoot(w http.ResponseWriter, r *http.Request) {
 	switch view {
 	case "", "dashboard":
 		view = "dashboard"
-	case "links", "analytics", "settings":
+	case "links", "analytics", "visits", "settings":
 	default:
 		view = "dashboard"
 	}
@@ -146,8 +148,8 @@ func (a *app) adminRoot(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data.Links, _ = a.fetchLinks("", 1, 10)
 	}
-	if view == "analytics" {
-		data.Recent = a.fetchRecentLogs(50)
+	if view == "analytics" || view == "visits" {
+		data.Recent = a.fetchRecentLogs(200)
 		data.Days = a.fetchDays(7)
 	}
 
@@ -165,8 +167,8 @@ func (a *app) fetchLinks(q string, page, perPage int) ([]adminLink, int) {
 	where := ""
 	args := []any{}
 	if q != "" {
-		where = " WHERE target_url LIKE ? OR CAST(e_length AS CHAR)=?"
-		args = append(args, "%"+q+"%", q)
+		where = " WHERE target_url LIKE ? OR created_ip LIKE ? OR CAST(e_length AS CHAR)=?"
+		args = append(args, "%"+q+"%", "%"+q+"%", q)
 	}
 	var count int
 	_ = db.QueryRow("SELECT COUNT(*) FROM links"+where, args...).Scan(&count)
@@ -178,7 +180,7 @@ func (a *app) fetchLinks(q string, page, perPage int) ([]adminLink, int) {
 		page = pages
 	}
 	args = append(args, perPage, (page-1)*perPage)
-	rows, err := db.Query("SELECT id,e_length,target_url,clicks,enabled,created_at,expires_at FROM links"+where+" ORDER BY id DESC LIMIT ? OFFSET ?", args...)
+	rows, err := db.Query("SELECT id,e_length,target_url,created_ip,clicks,enabled,created_at,expires_at FROM links"+where+" ORDER BY id DESC LIMIT ? OFFSET ?", args...)
 	if err != nil {
 		return nil, pages
 	}
@@ -189,7 +191,7 @@ func (a *app) fetchLinks(q string, page, perPage int) ([]adminLink, int) {
 	for rows.Next() {
 		var l adminLink
 		var expires *time.Time
-		if err := rows.Scan(&l.ID, &l.Length, &l.Target, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires); err != nil {
+		if err := rows.Scan(&l.ID, &l.Length, &l.Target, &l.CreatedIP, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires); err != nil {
 			continue
 		}
 		if expires != nil {
@@ -208,8 +210,8 @@ func (a *app) fetchLink(id int64) *adminLink {
 	}
 	var l adminLink
 	var expires *time.Time
-	err := db.QueryRow("SELECT id,e_length,target_url,clicks,enabled,created_at,expires_at FROM links WHERE id=? LIMIT 1", id).
-		Scan(&l.ID, &l.Length, &l.Target, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires)
+	err := db.QueryRow("SELECT id,e_length,target_url,created_ip,clicks,enabled,created_at,expires_at FROM links WHERE id=? LIMIT 1", id).
+		Scan(&l.ID, &l.Length, &l.Target, &l.CreatedIP, &l.Clicks, &l.Enabled, &l.CreatedAt, &expires)
 	if err != nil {
 		return nil
 	}
@@ -226,7 +228,7 @@ func (a *app) fetchRecentLogs(limit int) []adminLog {
 	if db == nil {
 		return nil
 	}
-	rows, err := db.Query("SELECT c.clicked_at,l.e_length,c.ip,c.referer FROM click_logs c JOIN links l ON l.id=c.link_id ORDER BY c.id DESC LIMIT ?", limit)
+	rows, err := db.Query("SELECT c.clicked_at,l.e_length,l.target_url,c.ip,c.referer FROM click_logs c JOIN links l ON l.id=c.link_id ORDER BY c.id DESC LIMIT ?", limit)
 	if err != nil {
 		return nil
 	}
@@ -234,7 +236,7 @@ func (a *app) fetchRecentLogs(limit int) []adminLog {
 	var out []adminLog
 	for rows.Next() {
 		var x adminLog
-		if rows.Scan(&x.ClickedAt, &x.Length, &x.IP, &x.Referer) == nil {
+		if rows.Scan(&x.ClickedAt, &x.Length, &x.Target, &x.IP, &x.Referer) == nil {
 			out = append(out, x)
 		}
 	}
@@ -468,7 +470,6 @@ func maskToken(token string) string {
 	return token[:6] + strings.Repeat("•", 20) + token[len(token)-6:]
 }
 
-
 func (a *app) adminExportLinks(w http.ResponseWriter, r *http.Request) {
 	if !a.isAdmin(r) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -479,7 +480,7 @@ func (a *app) adminExportLinks(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	rows, err := db.Query("SELECT id,e_length,target_url,clicks,enabled,created_at,expires_at FROM links ORDER BY id DESC")
+	rows, err := db.Query("SELECT id,e_length,target_url,created_ip,clicks,enabled,created_at,expires_at FROM links ORDER BY id DESC")
 	if err != nil {
 		http.Error(w, "export failed", http.StatusInternalServerError)
 		return
@@ -489,21 +490,21 @@ func (a *app) adminExportLinks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "attachment; filename=eeee-links.csv")
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"id", "e_length", "target_url", "clicks", "enabled", "created_at", "expires_at"})
+	_ = cw.Write([]string{"id", "e_length", "target_url", "created_ip", "clicks", "enabled", "created_at", "expires_at"})
 	for rows.Next() {
 		var id, length, clicks int64
-		var target string
+		var target, createdIP string
 		var enabled bool
 		var created time.Time
 		var expires *time.Time
-		if rows.Scan(&id, &length, &target, &clicks, &enabled, &created, &expires) != nil {
+		if rows.Scan(&id, &length, &target, &createdIP, &clicks, &enabled, &created, &expires) != nil {
 			continue
 		}
 		exp := ""
 		if expires != nil {
 			exp = expires.Format("2006-01-02 15:04:05")
 		}
-		_ = cw.Write([]string{strconv.FormatInt(id, 10), strconv.FormatInt(length, 10), csvSafe(target), strconv.FormatInt(clicks, 10), strconv.FormatBool(enabled), created.Format("2006-01-02 15:04:05"), exp})
+		_ = cw.Write([]string{strconv.FormatInt(id, 10), strconv.FormatInt(length, 10), csvSafe(target), createdIP, strconv.FormatInt(clicks, 10), strconv.FormatBool(enabled), created.Format("2006-01-02 15:04:05"), exp})
 	}
 	cw.Flush()
 }
